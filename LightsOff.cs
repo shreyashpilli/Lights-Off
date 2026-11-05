@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -29,6 +30,10 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     private static extern bool SetProcessDPIAware();
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    internal static extern int DwmSetWindowAttribute(
+        IntPtr hwnd, int attribute, ref int value, int valueSize);
 
     [DllImport("user32.dll", SetLastError = true)]
     internal static extern IntPtr SendMessageTimeout(
@@ -97,103 +102,180 @@ internal static class Program
 
 internal sealed class LightsOffForm : Form
 {
-    private readonly Button displayButton;
-    private readonly Button stopButton;
+    private readonly ActionButton displayButton;
+    private readonly ActionButton stopButton;
+    private readonly ActionButton customStartButton;
+    private readonly ActionButton preset30Button;
+    private readonly ActionButton preset60Button;
+    private readonly ActionButton preset120Button;
     private readonly Label status;
-    private readonly CheckBox keepAwakeToggle;
+    private readonly Label statusDot;
+    private readonly DarkSwitch keepAwakeToggle;
     private readonly TextBox customMinutes;
     private readonly NotifyIcon trayIcon;
     private readonly System.Windows.Forms.Timer offTimer;
     private readonly System.Windows.Forms.Timer sessionTimer;
+    private readonly System.Windows.Forms.Timer pulseTimer;
     private ToolStripMenuItem sessionMenuItem;
     private DateTime? sessionDeadline;
+    private int? sessionPresetMinutes;
     private bool active;
     private bool exiting;
     private bool displayRequestFailed;
+    private bool pulseBright;
 
     internal LightsOffForm()
     {
         Text = "Lights Off";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(520, 405);
+        ClientSize = new Size(520, 548);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
-        Font = new Font("Segoe UI", 10F);
+        Font = new Font("Segoe UI", 9.5F);
+        BackColor = Color.FromArgb(18, 19, 22);
+        ForeColor = Color.FromArgb(237, 239, 244);
 
+        NightGlyph brandGlyph = new NightGlyph {
+            Location = new Point(20, 20),
+            Size = new Size(30, 30)
+        };
+        Controls.Add(brandGlyph);
         Label title = new Label {
-            Text = "Turn monitors off. Keep your PC awake when needed.",
-            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
-            Location = new Point(22, 20),
-            Size = new Size(476, 32)
+            Text = "Lights Off",
+            Font = new Font("Segoe UI", 17F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(242, 243, 247),
+            Location = new Point(60, 18),
+            Size = new Size(220, 34)
         };
         Controls.Add(title);
 
-        Label body = new Label {
-            Text = "Left-click the tray icon to turn off the monitors. Keep-awake temporarily overrides Windows sleep settings.",
-            Location = new Point(24, 58),
-            Size = new Size(470, 38)
+        RoundedPanel displayCard = new RoundedPanel {
+            Location = new Point(18, 64),
+            Size = new Size(484, 132),
+            BackColor = Color.FromArgb(30, 32, 40),
+            SurroundingColor = Color.FromArgb(18, 19, 22)
         };
-        Controls.Add(body);
+        Controls.Add(displayCard);
+        Label displayHeading = new Label {
+            Text = "MONITORS OFF",
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(165, 170, 184),
+            Location = new Point(18, 13),
+            Size = new Size(200, 22)
+        };
+        displayCard.Controls.Add(displayHeading);
 
-        displayButton = new Button {
+        ToolTip trayHint = new ToolTip { AutoPopDelay = 9000, InitialDelay = 300, ReshowDelay = 100 };
+        ActionButton infoButton = new ActionButton {
+            Text = "i",
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(190, 194, 206),
+            AccentColor = Color.FromArgb(43, 46, 57),
+            HoverColor = Color.FromArgb(61, 65, 78),
+            SurfaceColor = Color.FromArgb(30, 32, 40),
+            Location = new Point(438, 10),
+            Size = new Size(28, 28),
+            TabStop = false,
+            IsPill = true
+        };
+        trayHint.SetToolTip(infoButton, "Tip: left-click the Lights Off tray icon to turn off monitors.");
+        displayCard.Controls.Add(infoButton);
+
+        displayButton = new ActionButton {
             Text = "Turn monitors off now",
-            Location = new Point(24, 106),
-            Size = new Size(470, 42)
+            ShowMonitorIcon = true,
+            AccentColor = Color.FromArgb(99, 102, 241),
+            HoverColor = Color.FromArgb(119, 122, 255),
+            UseAccent = true,
+            ForeColor = Color.White,
+            SurfaceColor = Color.FromArgb(30, 32, 40),
+            Font = new Font("Segoe UI Semibold", 11F),
+            Location = new Point(16, 49),
+            Size = new Size(452, 64)
         };
         displayButton.Click += delegate { RequestDisplaysStandby(true); };
-        Controls.Add(displayButton);
+        displayCard.Controls.Add(displayButton);
 
+        RoundedPanel awakeCard = new RoundedPanel {
+            Location = new Point(18, 212),
+            Size = new Size(484, 300),
+            BackColor = Color.FromArgb(30, 32, 40),
+            SurroundingColor = Color.FromArgb(18, 19, 22)
+        };
+        Controls.Add(awakeCard);
         Label awakeHeading = new Label {
             Text = "Keep PC awake",
-            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-            Location = new Point(24, 164),
-            Size = new Size(200, 26)
+            Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(242, 243, 247),
+            Location = new Point(18, 14),
+            Size = new Size(250, 26)
         };
-        Controls.Add(awakeHeading);
-
-        keepAwakeToggle = new CheckBox {
-            Text = "Until I switch it off",
-            Location = new Point(24, 192),
-            Size = new Size(240, 25)
+        awakeCard.Controls.Add(awakeHeading);
+        keepAwakeToggle = new DarkSwitch {
+            Location = new Point(420, 14),
+            Size = new Size(44, 26),
+            OnColor = Color.FromArgb(245, 158, 11)
         };
         keepAwakeToggle.CheckedChanged += OnKeepAwakeToggleChanged;
-        Controls.Add(keepAwakeToggle);
-
-        Label presetsLabel = new Label {
-            Text = "Or choose a time:",
-            Location = new Point(24, 232),
-            Size = new Size(130, 24)
+        awakeCard.Controls.Add(keepAwakeToggle);
+        Label awakeCaption = new Label {
+            Text = "Override Windows sleep while your work runs",
+            ForeColor = Color.FromArgb(165, 170, 184),
+            Location = new Point(18, 44),
+            Size = new Size(400, 22)
         };
-        Controls.Add(presetsLabel);
+        awakeCard.Controls.Add(awakeCaption);
 
-        AddPresetButton("30 minutes", 24, 260, 30);
-        AddPresetButton("1 hour", 174, 260, 60);
-        AddPresetButton("2 hours", 324, 260, 120);
+        preset30Button = AddPresetButton(awakeCard, "30 min", 18, 78, 30);
+        preset60Button = AddPresetButton(awakeCard, "1 hour", 161, 78, 60);
+        preset120Button = AddPresetButton(awakeCard, "2 hours", 304, 78, 120);
 
         Label customLabel = new Label {
-            Text = "Custom:",
-            Location = new Point(24, 326),
-            Size = new Size(74, 28)
+            Text = "Custom duration",
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(194, 198, 208),
+            Location = new Point(18, 132),
+            Size = new Size(160, 21)
         };
-        Controls.Add(customLabel);
+        awakeCard.Controls.Add(customLabel);
+        RoundedPanel inputGroup = new RoundedPanel {
+            Location = new Point(18, 155),
+            Size = new Size(448, 42),
+            BackColor = Color.FromArgb(18, 19, 22),
+            BorderColor = Color.FromArgb(46, 50, 62),
+            SurroundingColor = Color.FromArgb(30, 32, 40),
+            Radius = 9
+        };
+        awakeCard.Controls.Add(inputGroup);
         customMinutes = new TextBox {
             Text = "90",
-            Location = new Point(100, 322),
-            Size = new Size(72, 28)
+            BorderStyle = BorderStyle.None,
+            BackColor = Color.FromArgb(18, 19, 22),
+            ForeColor = Color.FromArgb(242, 243, 247),
+            Font = new Font("Segoe UI Semibold", 10F),
+            Location = new Point(12, 12),
+            Size = new Size(72, 20)
         };
         customMinutes.KeyPress += OnlyAllowDigits;
-        Controls.Add(customMinutes);
+        inputGroup.Controls.Add(customMinutes);
         Label minutesLabel = new Label {
             Text = "minutes",
-            Location = new Point(178, 326),
-            Size = new Size(66, 24)
+            ForeColor = Color.FromArgb(150, 155, 170),
+            Location = new Point(83, 10),
+            Size = new Size(64, 22)
         };
-        Controls.Add(minutesLabel);
-        Button customStartButton = new Button {
-            Text = "Start custom",
-            Location = new Point(252, 320),
-            Size = new Size(140, 34)
+        inputGroup.Controls.Add(minutesLabel);
+        customStartButton = new ActionButton {
+            Text = "Start",
+            AccentColor = Color.FromArgb(245, 158, 11),
+            HoverColor = Color.FromArgb(251, 191, 36),
+            UseAccent = true,
+            SurfaceColor = Color.FromArgb(18, 19, 22),
+            ForeColor = Color.FromArgb(30, 25, 15),
+            Font = new Font("Segoe UI Semibold", 9F),
+            Location = new Point(354, 5),
+            Size = new Size(88, 32)
         };
         customStartButton.Click += delegate {
             int minutes;
@@ -203,25 +285,57 @@ internal sealed class LightsOffForm : Form
                     "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            StartKeepAwake(DateTime.Now.AddMinutes(minutes));
+            StartTimedKeepAwake(minutes, null);
         };
-        Controls.Add(customStartButton);
+        inputGroup.Controls.Add(customStartButton);
 
-        stopButton = new Button {
+        RoundedPanel statusPanel = new RoundedPanel {
+            Location = new Point(18, 211),
+            Size = new Size(448, 68),
+            BackColor = Color.FromArgb(25, 27, 34),
+            BorderColor = Color.FromArgb(46, 50, 62),
+            SurroundingColor = Color.FromArgb(30, 32, 40),
+            Radius = 10
+        };
+        awakeCard.Controls.Add(statusPanel);
+        statusDot = new Label {
+            Text = "●",
+            Font = new Font("Segoe UI Symbol", 11F),
+            ForeColor = Color.FromArgb(122, 126, 140),
+            Location = new Point(14, 21),
+            Size = new Size(20, 24)
+        };
+        statusPanel.Controls.Add(statusDot);
+        status = new Label {
+            Text = "PC follows normal sleep settings",
+            ForeColor = Color.FromArgb(177, 181, 193),
+            Location = new Point(36, 19),
+            Size = new Size(218, 30)
+        };
+        statusPanel.Controls.Add(status);
+        stopButton = new ActionButton {
             Text = "Allow normal sleep",
-            Location = new Point(24, 360),
-            Size = new Size(180, 34),
-            Enabled = false
+            AccentColor = Color.FromArgb(57, 60, 72),
+            HoverColor = Color.FromArgb(72, 76, 90),
+            SurfaceColor = Color.FromArgb(25, 27, 34),
+            ForeColor = Color.FromArgb(237, 239, 244),
+            Font = new Font("Segoe UI Semibold", 8.5F),
+            Location = new Point(300, 17),
+            Size = new Size(132, 34),
+            Enabled = false,
+            Visible = false
         };
         stopButton.Click += delegate { StopSession(false, true); };
-        Controls.Add(stopButton);
+        statusPanel.Controls.Add(stopButton);
 
-        status = new Label {
-            Text = "Ready.",
-            Location = new Point(220, 358),
-            Size = new Size(270, 40)
+        Label footer = new Label {
+            Text = "Monitor standby uses the display's normal low-power state.",
+            ForeColor = Color.FromArgb(126, 131, 145),
+            Font = new Font("Segoe UI", 8.5F),
+            Location = new Point(20, 520),
+            Size = new Size(470, 20)
         };
-        Controls.Add(status);
+        Controls.Add(footer);
 
         ContextMenuStrip menu = new ContextMenuStrip();
         menu.Items.Add("Open Lights Off", null, delegate { ShowWindow(); });
@@ -245,18 +359,32 @@ internal sealed class LightsOffForm : Form
         sessionTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         sessionTimer.Tick += OnSessionTimer;
 
+        pulseTimer = new System.Windows.Forms.Timer { Interval = 520 };
+        pulseTimer.Tick += delegate {
+            pulseBright = !pulseBright;
+            statusDot.ForeColor = active
+                ? (pulseBright ? Color.FromArgb(245, 158, 11) : Color.FromArgb(158, 101, 18))
+                : Color.FromArgb(122, 126, 140);
+        };
+
         FormClosing += OnFormClosing;
     }
 
-    private void AddPresetButton(string text, int x, int y, int minutes)
+    private ActionButton AddPresetButton(Control parent, string text, int x, int y, int minutes)
     {
-        Button button = new Button {
+        ActionButton button = new ActionButton {
             Text = text,
+            AccentColor = Color.FromArgb(245, 158, 11),
+            HoverColor = Color.FromArgb(251, 191, 36),
+            SurfaceColor = Color.FromArgb(30, 32, 40),
+            ForeColor = Color.FromArgb(237, 239, 244),
             Location = new Point(x, y),
-            Size = new Size(140, 38)
+            Size = new Size(130, 40),
+            IsPill = true
         };
-        button.Click += delegate { StartKeepAwake(DateTime.Now.AddMinutes(minutes)); };
-        Controls.Add(button);
+        button.Click += delegate { StartTimedKeepAwake(minutes, minutes); };
+        parent.Controls.Add(button);
+        return button;
     }
 
     private static void OnlyAllowDigits(object sender, KeyPressEventArgs e)
@@ -283,6 +411,16 @@ internal sealed class LightsOffForm : Form
 
     private void StartKeepAwake(DateTime? deadline)
     {
+        StartKeepAwake(deadline, null);
+    }
+
+    private void StartTimedKeepAwake(int minutes, int? presetMinutes)
+    {
+        StartKeepAwake(DateTime.Now.AddMinutes(minutes), presetMinutes);
+    }
+
+    private void StartKeepAwake(DateTime? deadline, int? presetMinutes)
+    {
         if (!active)
         {
             uint state = NativeMethods.SetThreadExecutionState(
@@ -300,10 +438,15 @@ internal sealed class LightsOffForm : Form
 
         displayRequestFailed = false;
         sessionDeadline = deadline;
+        sessionPresetMinutes = presetMinutes;
         sessionMenuItem.Checked = true;
         keepAwakeToggle.Checked = !deadline.HasValue;
         stopButton.Enabled = true;
+        stopButton.Visible = true;
+        pulseBright = true;
+        pulseTimer.Start();
         UpdateSessionStatus();
+        UpdatePresetButtons();
         UpdateTrayText();
         offTimer.Start();
         if (sessionDeadline.HasValue)
@@ -364,12 +507,11 @@ internal sealed class LightsOffForm : Form
     {
         if (!sessionDeadline.HasValue)
         {
-            status.Text = "PC awake. Windows sleep settings return when you switch this off.";
+            status.Text = "Awake until you switch it off";
             return;
         }
 
-        status.Text = String.Format("Session active. {0} remaining.",
-            FormatRemaining(sessionDeadline.Value - DateTime.Now));
+        status.Text = String.Format("Awake for {0}", FormatRemaining(sessionDeadline.Value - DateTime.Now));
     }
 
     private void UpdateTrayText()
@@ -378,10 +520,18 @@ internal sealed class LightsOffForm : Form
         {
             trayIcon.Text = "Lights Off is off";
             sessionMenuItem.Checked = false;
+            keepAwakeToggle.Checked = false;
+            stopButton.Visible = false;
+            status.Text = "PC follows normal sleep settings";
+            statusDot.ForeColor = Color.FromArgb(122, 126, 140);
+            UpdatePresetButtons();
             return;
         }
 
         sessionMenuItem.Checked = true;
+        keepAwakeToggle.Checked = !sessionDeadline.HasValue;
+        stopButton.Visible = true;
+        UpdatePresetButtons();
 
         if (displayRequestFailed)
         {
@@ -414,8 +564,11 @@ internal sealed class LightsOffForm : Form
         uint keepAwakeCleared = NativeMethods.SetThreadExecutionState(NativeMethods.EsContinuous);
         active = false;
         sessionDeadline = null;
+        sessionPresetMinutes = null;
         displayRequestFailed = false;
+        pulseTimer.Stop();
         stopButton.Enabled = false;
+        stopButton.Visible = false;
         sessionMenuItem.Checked = false;
         keepAwakeToggle.Checked = false;
         status.Text = sessionExpired
@@ -467,7 +620,270 @@ internal sealed class LightsOffForm : Form
         StopSession(false, false);
         offTimer.Dispose();
         sessionTimer.Dispose();
+        pulseTimer.Dispose();
         trayIcon.Visible = false;
         trayIcon.Dispose();
+    }
+
+    private void UpdatePresetButtons()
+    {
+        preset30Button.Selected = active && sessionPresetMinutes == 30;
+        preset60Button.Selected = active && sessionPresetMinutes == 60;
+        preset120Button.Selected = active && sessionPresetMinutes == 120;
+        preset30Button.ForeColor = preset30Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
+        preset60Button.ForeColor = preset60Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
+        preset120Button.ForeColor = preset120Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        try
+        {
+            int darkMode = 1;
+            int result = NativeMethods.DwmSetWindowAttribute(Handle, 20, ref darkMode, sizeof(int));
+            if (result != 0)
+                NativeMethods.DwmSetWindowAttribute(Handle, 19, ref darkMode, sizeof(int));
+        }
+        catch (DllNotFoundException) { }
+        catch (EntryPointNotFoundException) { }
+    }
+}
+
+internal static class UiDrawing
+{
+    internal static GraphicsPath RoundedRectangle(Rectangle bounds, int radius)
+    {
+        int diameter = Math.Max(2, Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height)));
+        int right = bounds.Right - diameter;
+        int bottom = bounds.Bottom - diameter;
+        GraphicsPath path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(right, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(right, bottom, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bottom, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+internal sealed class RoundedPanel : Panel
+{
+    internal int Radius { get; set; }
+    internal Color BorderColor { get; set; }
+    internal Color SurroundingColor { get; set; }
+
+    internal RoundedPanel()
+    {
+        Radius = 14;
+        BorderColor = Color.FromArgb(46, 50, 62);
+        SurroundingColor = Color.FromArgb(18, 19, 22);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Rectangle bounds = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (SolidBrush background = new SolidBrush(SurroundingColor))
+            e.Graphics.FillRectangle(background, ClientRectangle);
+        using (GraphicsPath path = UiDrawing.RoundedRectangle(bounds, Radius))
+        using (SolidBrush brush = new SolidBrush(BackColor))
+            e.Graphics.FillPath(brush, path);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Rectangle bounds = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath path = UiDrawing.RoundedRectangle(bounds, Radius))
+        using (Pen pen = new Pen(BorderColor, 1F))
+            e.Graphics.DrawPath(pen, path);
+    }
+}
+
+internal sealed class ActionButton : Control
+{
+    private bool hovering;
+    internal Color AccentColor { get; set; }
+    internal Color HoverColor { get; set; }
+    private Color surfaceColor;
+    internal Color SurfaceColor
+    {
+        get { return surfaceColor; }
+        set { surfaceColor = value; BackColor = value; Invalidate(); }
+    }
+    internal bool Selected { get; set; }
+    internal bool IsPill { get; set; }
+    internal bool ShowMonitorIcon { get; set; }
+    internal bool UseAccent { get; set; }
+
+    internal ActionButton()
+    {
+        AccentColor = Color.FromArgb(57, 60, 72);
+        HoverColor = Color.FromArgb(72, 76, 90);
+        SurfaceColor = Color.FromArgb(30, 32, 40);
+        ForeColor = Color.White;
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        AccessibleRole = AccessibleRole.PushButton;
+    }
+
+    protected override void OnMouseEnter(EventArgs e) { hovering = true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e) { hovering = false; Invalidate(); base.OnMouseLeave(e); }
+    protected override void OnEnabledChanged(EventArgs e) { Invalidate(); base.OnEnabledChanged(e); }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
+        {
+            OnClick(EventArgs.Empty);
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        using (SolidBrush brush = new SolidBrush(SurfaceColor))
+            e.Graphics.FillRectangle(brush, ClientRectangle);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Rectangle bounds = new Rectangle(0, 0, Width - 1, Height - 1);
+        int radius = IsPill ? Height / 2 : 10;
+        Color fill = Selected ? AccentColor : (hovering ? HoverColor : BackColorForButton());
+        if (!Enabled) fill = Color.FromArgb(42, 44, 52);
+        using (GraphicsPath path = UiDrawing.RoundedRectangle(bounds, radius))
+        using (SolidBrush brush = new SolidBrush(fill))
+            e.Graphics.FillPath(brush, path);
+
+        if (ShowMonitorIcon)
+        {
+            SizeF textSize = e.Graphics.MeasureString(Text, Font);
+            float groupWidth = textSize.Width + 36;
+            float left = (Width - groupWidth) / 2F;
+            float top = (Height - 20) / 2F;
+            using (Pen pen = new Pen(ForeColor, 1.7F))
+            {
+                using (GraphicsPath iconPath = UiDrawing.RoundedRectangle(new Rectangle((int)left, (int)top, 22, 15), 3))
+                    e.Graphics.DrawPath(pen, iconPath);
+                e.Graphics.DrawLine(pen, left + 11, top + 15, left + 11, top + 19);
+                e.Graphics.DrawLine(pen, left + 6, top + 19, left + 16, top + 19);
+            }
+            using (SolidBrush textBrush = new SolidBrush(Enabled ? ForeColor : Color.Gray))
+                e.Graphics.DrawString(Text, Font, textBrush, left + 32, (Height - Font.Height) / 2F);
+        }
+        else
+        {
+            TextRenderer.DrawText(e.Graphics, Text, Font, bounds,
+                Enabled ? ForeColor : Color.Gray,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+        }
+
+        if (Focused && ShowFocusCues)
+        {
+            Rectangle focus = Rectangle.Inflate(bounds, -5, -5);
+            ControlPaint.DrawFocusRectangle(e.Graphics, focus, ForeColor, fill);
+        }
+    }
+
+    private Color BackColorForButton()
+    {
+        return UseAccent ? AccentColor : Color.FromArgb(43, 46, 57);
+    }
+}
+
+internal sealed class DarkSwitch : Control
+{
+    private bool isChecked;
+    internal Color OnColor { get; set; }
+    internal bool Checked
+    {
+        get { return isChecked; }
+        set { if (isChecked != value) { isChecked = value; Invalidate(); } }
+    }
+    internal event EventHandler CheckedChanged;
+
+    internal DarkSwitch()
+    {
+        OnColor = Color.FromArgb(245, 158, 11);
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+        AccessibleRole = AccessibleRole.CheckButton;
+        AccessibleName = "Keep PC awake until switched off";
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        Checked = !Checked;
+        EventHandler handler = CheckedChanged;
+        if (handler != null) handler(this, EventArgs.Empty);
+        base.OnClick(e);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Space)
+        {
+            OnClick(EventArgs.Empty);
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        Rectangle track = new Rectangle(0, 2, Width - 1, Height - 5);
+        using (GraphicsPath path = UiDrawing.RoundedRectangle(track, track.Height / 2))
+        using (SolidBrush brush = new SolidBrush(Checked ? OnColor : Color.FromArgb(67, 70, 82)))
+            e.Graphics.FillPath(brush, path);
+        int knobX = Checked ? Width - Height + 2 : 2;
+        Rectangle knob = new Rectangle(knobX, 4, Height - 9, Height - 9);
+        using (SolidBrush brush = new SolidBrush(Color.FromArgb(248, 249, 252)))
+            e.Graphics.FillEllipse(brush, knob);
+        if (Focused)
+            ControlPaint.DrawFocusRectangle(e.Graphics, ClientRectangle);
+    }
+}
+
+internal sealed class NightGlyph : Control
+{
+    internal NightGlyph()
+    {
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using (GraphicsPath path = UiDrawing.RoundedRectangle(new Rectangle(0, 0, Width - 1, Height - 1), 8))
+        using (SolidBrush bg = new SolidBrush(Color.FromArgb(41, 43, 60)))
+            e.Graphics.FillPath(bg, path);
+        using (Pen pen = new Pen(Color.FromArgb(165, 168, 255), 1.7F))
+        {
+            using (GraphicsPath iconPath = UiDrawing.RoundedRectangle(new Rectangle(6, 8, 18, 13), 2))
+                e.Graphics.DrawPath(pen, iconPath);
+            e.Graphics.DrawLine(pen, 15, 21, 15, 24);
+            e.Graphics.DrawLine(pen, 11, 24, 19, 24);
+        }
+        using (SolidBrush moon = new SolidBrush(Color.FromArgb(165, 168, 255)))
+        using (SolidBrush cutout = new SolidBrush(Color.FromArgb(41, 43, 60)))
+        {
+            e.Graphics.FillEllipse(moon, 17, 4, 9, 9);
+            e.Graphics.FillEllipse(cutout, 20, 3, 8, 8);
+        }
     }
 }
