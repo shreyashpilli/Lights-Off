@@ -12,6 +12,8 @@ Sleepwalk v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks co
 
 Red Light is a separate Windows accessibility app in `RedLight/`. It uses the Windows full-screen Magnification API instead of a desktop overlay.
 
+Cross-platform planning for Sleepwalk is in [PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md). The first targets are a native macOS menu bar app and Linux X11 plus explicitly detected Wayland compositor support. Mac and Linux builds remain experimental until tested with real displays.
+
 ### Acceptance checks
 
 - A test workload continues running while Sleepwalk is active and the displays are in standby.
@@ -35,6 +37,7 @@ Red Light is a separate Windows accessibility app in `RedLight/`. It uses the Wi
 
 ## Later distribution work
 
+- Implement and verify Mac and Linux power-control adapters using the platform plan.
 - Add a custom app icon and improve first-run instructions.
 - Automate versioned GitHub releases from tags.
 - Consider code signing if distribution beyond a small group makes Windows reputation warnings a problem.
