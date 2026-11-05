@@ -4,13 +4,13 @@ A small Windows tray utility for leaving the PC awake while sending connected di
 
 ## Start it
 
-For a Lights Off build, extract the Windows ZIP, then double-click **Start Lights Off.cmd** or **LightsOff.exe**. Click **Start Lights Off**. The app stays in the notification area and requests that Windows remain awake. After a short delay, it asks displays to enter standby. Left-click the tray icon again or choose **Stop session** to release the keep-awake request. Lights Off does not send a display-on command when you stop; displays respond to your input normally. The published v0.1.0 archive is historical and still has the older filenames.
+For a Lights Off build, extract the Windows ZIP, then double-click **Start Lights Off.cmd** or **LightsOff.exe**. Left-click the tray icon to ask the monitors to enter standby. This does not change Windows' normal sleep settings. Right-click the icon and turn on **Keep PC awake** to prevent the PC from sleeping; turn it off to return to normal sleep settings. In the app window, choose **30 minutes**, **1 hour**, **2 hours**, or enter a custom number of minutes. The timer returns the PC to its normal sleep settings when it ends. Monitor standby is not a hard power-off. The published v0.1.0 archive is historical and still has the older filenames.
 
-The keep-awake request is released if Lights Off exits. Left-click the Lights Off tray icon to start or stop a session. Closing the window while a session is active hides it to the tray; right-click the tray icon for settings or the **Exit** command. The ZIP is portable and does not require an installer.
+The keep-awake request is released if Lights Off exits. Closing the window while a session is active hides it to the tray; right-click the tray icon to open settings, toggle **Keep PC awake**, or exit. The ZIP is portable and does not require an installer.
 
 ## Session length
 
-Choose **Until stopped**, **30 minutes**, **1 hour**, **2 hours**, **Custom duration**, or **End at a specific time** before starting. A custom duration can be up to 999 hours and 59 minutes, and must be at least 1 minute. For a clock time that has already passed today, Lights Off schedules the end for tomorrow. Timed sessions show the remaining time in the tray tooltip. When the time runs out, Lights Off asks Windows to wake the displays and returns the PC to its normal power settings. The default is **Until stopped**, which matches the behavior of v0.1.0.
+Keep-awake can be indefinite or timed. The window has three preset durations and a custom whole-minute entry. Timed sessions show the remaining time in the tray tooltip. When the time runs out, Lights Off releases the keep-awake request and returns the PC to its normal sleep settings without changing the displays' current state.
 
 Lights Off reports whether Windows accepted the keep-awake and display requests. Windows accepting a display request does not guarantee every monitor followed it; monitor firmware and connection type still affect standby and wake behavior.
 
@@ -20,7 +20,7 @@ The separate **Redlight** app applies a color matrix through the Windows full-sc
 
 ## Build from source
 
-On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `LightsOff.cs`, runs a smoke check that does not alter display power, and prints the executable's SHA-256 hash. After building, **Start Lights Off.cmd** launches `dist\LightsOff.exe`. The PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for session timers and request status feedback.
+On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `LightsOff.cs`, runs a smoke check that does not alter display power, and prints the executable's SHA-256 hash. After building, **Start Lights Off.cmd** launches `dist\LightsOff.exe`. The PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for timed sessions and the full tray controls.
 
 ## Limits
 

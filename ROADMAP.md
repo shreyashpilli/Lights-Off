@@ -2,7 +2,7 @@
 
 ## Current release
 
-Lights Off v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks connected displays to enter standby, and provides a tray action to stop the session and wake the displays.
+Lights Off v0.1.0 is a portable Windows tray app. Left-click asks connected displays to enter standby. A separate tray toggle keeps the PC awake until turned off, and the app window offers timed keep-awake sessions.
 
 ## v0.2: Safer sessions
 
@@ -18,6 +18,8 @@ Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPP
 
 - A test workload continues running while Lights Off is active and the displays are in standby.
 - The tray state clearly distinguishes an active session from a failed display request.
+- Left-clicking the tray icon requests display standby without changing the PC keep-awake state.
+- The tray menu has a checked keep-awake toggle that can be switched off to restore normal Windows sleep behavior.
 - A timed session ends at the selected time and releases the keep-awake request without sending a display-on command.
 - An indefinite session continues until the user stops it or exits Lights Off.
 - A custom duration and selected clock time produce the expected end time, including the next-day case.
@@ -31,7 +33,7 @@ Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPP
 
 ## v0.3: Faster controls
 
-- Add a configurable keyboard shortcut to start or stop a session.
+- Add a configurable keyboard shortcut to start a session or allow normal sleep.
 - Keep the tray menu as a visible fallback when the shortcut is unavailable or conflicts with another app.
 - Add a small settings screen for the shortcut and default session length.
 

@@ -43,6 +43,7 @@ function Stop-LightsOff {
     $status.Text = 'Session stopped. Windows power settings are back in control.'
     $startButton.Enabled = $true
     $stopButton.Enabled = $false
+    $sessionItem.Checked = $false
     $notifyIcon.Text = 'Lights Off is off'
 }
 
@@ -78,7 +79,7 @@ $startButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
 $form.Controls.Add($startButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
-$stopButton.Text = 'Stop session'
+$stopButton.Text = 'Allow normal sleep'
 $stopButton.Location = New-Object System.Drawing.Point(210, 128)
 $stopButton.Size = New-Object System.Drawing.Size(188, 42)
 $stopButton.Enabled = $false
@@ -96,15 +97,24 @@ $notifyIcon.Text = 'Lights Off is off'
 $notifyIcon.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 $showItem = $menu.Items.Add('Open Lights Off')
-$stopItem = $menu.Items.Add('Stop session')
+$sessionItem = $menu.Items.Add('Keep PC awake')
+$sessionItem.CheckOnClick = $true
+$sessionItem.Add_Click({
+    if ($sessionItem.Checked -and -not $script:active) { $startButton.PerformClick() }
+    elseif (-not $sessionItem.Checked -and $script:active) { Stop-LightsOff }
+})
 [void]$menu.Items.Add('-')
 $exitItem = $menu.Items.Add('Exit')
 $notifyIcon.ContextMenuStrip = $menu
 
 $showItem.Add_Click({ $form.Show(); $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal; $form.Activate() })
-$stopItem.Add_Click({ Stop-LightsOff })
 $exitItem.Add_Click({ $script:exiting = $true; Stop-LightsOff; $form.Close() })
 $notifyIcon.Add_DoubleClick({ $form.Show(); $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal; $form.Activate() })
+$notifyIcon.Add_MouseClick({
+    if ($_.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        Request-DisplaysStandby
+    }
+})
 
 $offTimer = New-Object System.Windows.Forms.Timer
 $offTimer.Interval = 900
@@ -125,6 +135,7 @@ $startButton.Add_Click({
     $script:active = $true
     $startButton.Enabled = $false
     $stopButton.Enabled = $true
+    $sessionItem.Checked = $true
     $status.Text = 'PC awake. Displays will enter standby in a moment.'
     $notifyIcon.Text = 'Lights Off is active'
     $offTimer.Start()
