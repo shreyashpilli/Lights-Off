@@ -5,7 +5,7 @@ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class QuietRunNative {
+public static class SleepwalkNative {
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern uint SetThreadExecutionState(uint flags);
 
@@ -28,7 +28,7 @@ function Set-Displays([int]$PowerState) {
     $result = [IntPtr]::Zero
     # PowerState 2 requests standby. -1 requests the display turn on.
     $state = [IntPtr]::new($PowerState)
-    [void][QuietRunNative]::SendMessageTimeout(
+    [void][SleepwalkNative]::SendMessageTimeout(
         $script:HWND_BROADCAST,
         $script:WM_SYSCOMMAND,
         $script:SC_MONITORPOWER,
@@ -38,19 +38,19 @@ function Set-Displays([int]$PowerState) {
         [ref]$result)
 }
 
-function Stop-QuietRun {
+function Stop-Sleepwalk {
     if (-not $script:active) { return }
     Set-Displays -PowerState -1
-    [void][QuietRunNative]::SetThreadExecutionState($script:ES_CONTINUOUS)
+    [void][SleepwalkNative]::SetThreadExecutionState($script:ES_CONTINUOUS)
     $script:active = $false
     $status.Text = 'Session stopped. Windows power settings are back in control.'
     $startButton.Enabled = $true
     $stopButton.Enabled = $false
-    $notifyIcon.Text = 'Quiet Run is off'
+    $notifyIcon.Text = 'Sleepwalk is off'
 }
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'Quiet Run'
+$form.Text = 'Sleepwalk'
 $form.StartPosition = 'CenterScreen'
 $form.Size = New-Object System.Drawing.Size(440, 270)
 $form.MinimumSize = $form.Size
@@ -74,7 +74,7 @@ $body.Size = New-Object System.Drawing.Size(374, 52)
 $form.Controls.Add($body)
 
 $startButton = New-Object System.Windows.Forms.Button
-$startButton.Text = 'Start quiet run'
+$startButton.Text = 'Start Sleepwalk'
 $startButton.Location = New-Object System.Drawing.Point(24, 128)
 $startButton.Size = New-Object System.Drawing.Size(175, 42)
 $startButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
@@ -95,18 +95,18 @@ $form.Controls.Add($status)
 
 $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
 $notifyIcon.Icon = [System.Drawing.SystemIcons]::Application
-$notifyIcon.Text = 'Quiet Run is off'
+$notifyIcon.Text = 'Sleepwalk is off'
 $notifyIcon.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
-$showItem = $menu.Items.Add('Open Quiet Run')
+$showItem = $menu.Items.Add('Open Sleepwalk')
 $stopItem = $menu.Items.Add('Stop and wake displays')
 [void]$menu.Items.Add('-')
 $exitItem = $menu.Items.Add('Exit')
 $notifyIcon.ContextMenuStrip = $menu
 
 $showItem.Add_Click({ $form.Show(); $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal; $form.Activate() })
-$stopItem.Add_Click({ Stop-QuietRun })
-$exitItem.Add_Click({ $script:exiting = $true; Stop-QuietRun; $form.Close() })
+$stopItem.Add_Click({ Stop-Sleepwalk })
+$exitItem.Add_Click({ $script:exiting = $true; Stop-Sleepwalk; $form.Close() })
 $notifyIcon.Add_DoubleClick({ $form.Show(); $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal; $form.Activate() })
 
 $offTimer = New-Object System.Windows.Forms.Timer
@@ -115,12 +115,12 @@ $offTimer.Add_Tick({
     $offTimer.Stop()
     if ($script:active) {
         Set-Displays -PowerState 2
-        $notifyIcon.ShowBalloonTip(1800, 'Quiet Run is active', 'The PC is staying awake. Displays were asked to enter standby.', [System.Windows.Forms.ToolTipIcon]::Info)
+        $notifyIcon.ShowBalloonTip(1800, 'Sleepwalk is active', 'The PC is staying awake. Displays were asked to enter standby.', [System.Windows.Forms.ToolTipIcon]::Info)
     }
 })
 
 $startButton.Add_Click({
-    $state = [QuietRunNative]::SetThreadExecutionState($script:ES_CONTINUOUS -bor $script:ES_SYSTEM_REQUIRED)
+    $state = [SleepwalkNative]::SetThreadExecutionState($script:ES_CONTINUOUS -bor $script:ES_SYSTEM_REQUIRED)
     if ($state -eq 0) {
         $status.Text = 'Windows could not enable keep-awake mode.'
         return
@@ -129,19 +129,19 @@ $startButton.Add_Click({
     $startButton.Enabled = $false
     $stopButton.Enabled = $true
     $status.Text = 'PC awake. Displays will enter standby in a moment.'
-    $notifyIcon.Text = 'Quiet Run is active'
+    $notifyIcon.Text = 'Sleepwalk is active'
     $offTimer.Start()
     $form.Hide()
 })
 
-$stopButton.Add_Click({ Stop-QuietRun })
+$stopButton.Add_Click({ Stop-Sleepwalk })
 $form.Add_FormClosing({
     if (-not $script:exiting -and $script:active) {
         $_.Cancel = $true
         $form.Hide()
         return
     }
-    Stop-QuietRun
+    Stop-Sleepwalk
     $offTimer.Dispose()
     $notifyIcon.Visible = $false
     $notifyIcon.Dispose()

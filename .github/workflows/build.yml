@@ -1,4 +1,4 @@
-name: Windows build
+name: Sleepwalk Windows build
 
 on:
   push:
@@ -24,6 +24,6 @@ jobs:
       - name: Upload Windows package
         uses: actions/upload-artifact@v6
         with:
-          name: QuietRun-Windows
-          path: dist/QuietRun-Windows.zip
+          name: Sleepwalk-Windows
+          path: dist/Sleepwalk-Windows.zip
           if-no-files-found: error

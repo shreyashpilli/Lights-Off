@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Quiet Run")]
+[assembly: AssemblyTitle("Sleepwalk")]
 [assembly: AssemblyDescription("Keep Windows awake while displays enter standby")]
-[assembly: AssemblyCompany("Quiet Run")]
-[assembly: AssemblyProduct("Quiet Run")]
+[assembly: AssemblyCompany("Sleepwalk")]
+[assembly: AssemblyProduct("Sleepwalk")]
 [assembly: AssemblyVersion("0.1.0.0")]
 [assembly: AssemblyFileVersion("0.1.0.0")]
 
@@ -54,25 +54,25 @@ internal static class Program
 
             NativeMethods.SetThreadExecutionState(NativeMethods.EsContinuous);
             NativeMethods.SetDisplays(-1); // Wake only; never turn displays off during a smoke check.
-            Console.WriteLine("Quiet Run startup and Windows power APIs are available.");
+            Console.WriteLine("Sleepwalk startup and Windows power APIs are available.");
             return 0;
         }
 
         bool createdNew;
-        using (Mutex mutex = new Mutex(true, "Local\\QuietRun.SingleInstance", out createdNew))
+        using (Mutex mutex = new Mutex(true, "Local\\Sleepwalk.SingleInstance", out createdNew))
         {
             if (!createdNew)
                 return 0;
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new QuietRunForm());
+            Application.Run(new SleepwalkForm());
         }
         return 0;
     }
 }
 
-internal sealed class QuietRunForm : Form
+internal sealed class SleepwalkForm : Form
 {
     private readonly Button startButton;
     private readonly Button stopButton;
@@ -82,9 +82,9 @@ internal sealed class QuietRunForm : Form
     private bool active;
     private bool exiting;
 
-    internal QuietRunForm()
+    internal SleepwalkForm()
     {
-        Text = "Quiet Run";
+        Text = "Sleepwalk";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(416, 225);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -108,7 +108,7 @@ internal sealed class QuietRunForm : Form
         Controls.Add(body);
 
         startButton = new Button {
-            Text = "Start quiet run",
+            Text = "Start Sleepwalk",
             Location = new Point(24, 128),
             Size = new Size(175, 42)
         };
@@ -132,14 +132,14 @@ internal sealed class QuietRunForm : Form
         Controls.Add(status);
 
         ContextMenuStrip menu = new ContextMenuStrip();
-        menu.Items.Add("Open Quiet Run", null, delegate { ShowWindow(); });
+        menu.Items.Add("Open Sleepwalk", null, delegate { ShowWindow(); });
         menu.Items.Add("Stop and wake displays", null, delegate { StopSession(); });
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { exiting = true; StopSession(); Close(); });
 
         trayIcon = new NotifyIcon {
             Icon = SystemIcons.Application,
-            Text = "Quiet Run is off",
+            Text = "Sleepwalk is off",
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -151,7 +151,7 @@ internal sealed class QuietRunForm : Form
             if (active)
             {
                 NativeMethods.SetDisplays(2);
-                trayIcon.ShowBalloonTip(1800, "Quiet Run is active",
+                trayIcon.ShowBalloonTip(1800, "Sleepwalk is active",
                     "The PC is staying awake. Displays were asked to enter standby.",
                     ToolTipIcon.Info);
             }
@@ -168,8 +168,8 @@ internal sealed class QuietRunForm : Form
         {
             status.Text = "Windows could not enable keep-awake mode.";
             MessageBox.Show(this,
-                "Windows could not enable keep-awake mode. Try closing and reopening Quiet Run.",
-                "Quiet Run", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Windows could not enable keep-awake mode. Try closing and reopening Sleepwalk.",
+                "Sleepwalk", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
@@ -177,7 +177,7 @@ internal sealed class QuietRunForm : Form
         startButton.Enabled = false;
         stopButton.Enabled = true;
         status.Text = "PC awake. Displays will enter standby in a moment.";
-        trayIcon.Text = "Quiet Run is active";
+        trayIcon.Text = "Sleepwalk is active";
         offTimer.Start();
         Hide();
     }
@@ -193,7 +193,7 @@ internal sealed class QuietRunForm : Form
         status.Text = "Session stopped. Windows power settings are back in control.";
         startButton.Enabled = true;
         stopButton.Enabled = false;
-        trayIcon.Text = "Quiet Run is off";
+        trayIcon.Text = "Sleepwalk is off";
     }
 
     private void ShowWindow()

@@ -8,21 +8,21 @@ if (-not (Test-Path -LiteralPath $compiler)) {
     $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
 }
 if (-not (Test-Path -LiteralPath $compiler)) {
-    throw 'The .NET Framework C# compiler was not found. Build Quiet Run on Windows with .NET Framework 4.x installed.'
+    throw 'The .NET Framework C# compiler was not found. Build Sleepwalk on Windows with .NET Framework 4.x installed.'
 }
 
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$exePath = Join-Path $OutputDirectory 'QuietRun.exe'
+$exePath = Join-Path $OutputDirectory 'Sleepwalk.exe'
 & $compiler /nologo /target:winexe /optimize+ /platform:anycpu `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-    "/out:$exePath" (Join-Path $PSScriptRoot 'QuietRun.cs')
+    "/out:$exePath" (Join-Path $PSScriptRoot 'Sleepwalk.cs')
 if ($LASTEXITCODE -ne 0) {
     throw "C# compilation failed with exit code $LASTEXITCODE."
 }
 
 $smoke = Start-Process -FilePath $exePath -ArgumentList '--self-test' -Wait -PassThru -NoNewWindow
 if ($smoke.ExitCode -ne 0) {
-    throw "Quiet Run smoke check failed with exit code $($smoke.ExitCode)."
+    throw "Sleepwalk smoke check failed with exit code $($smoke.ExitCode)."
 }
 
 $gui = Start-Process -FilePath $exePath -PassThru
@@ -34,23 +34,23 @@ try {
     } while ($gui.MainWindowHandle -eq [IntPtr]::Zero -and (Get-Date) -lt $deadline)
 
     if ($gui.MainWindowHandle -eq [IntPtr]::Zero) {
-        throw 'Quiet Run window did not appear during the GUI smoke check.'
+        throw 'Sleepwalk window did not appear during the GUI smoke check.'
     }
     if (-not $gui.CloseMainWindow()) {
-        throw 'Quiet Run window could not be closed cleanly during the GUI smoke check.'
+        throw 'Sleepwalk window could not be closed cleanly during the GUI smoke check.'
     }
     if (-not $gui.WaitForExit(5000)) {
-        throw 'Quiet Run did not exit after its window was closed.'
+        throw 'Sleepwalk did not exit after its window was closed.'
     }
     if ($gui.ExitCode -ne 0) {
-        throw "Quiet Run exited with code $($gui.ExitCode) during the GUI smoke check."
+        throw "Sleepwalk exited with code $($gui.ExitCode) during the GUI smoke check."
     }
 }
 finally {
     $gui.Dispose()
 }
 
-$zipPath = Join-Path $OutputDirectory 'QuietRun-Windows.zip'
+$zipPath = Join-Path $OutputDirectory 'Sleepwalk-Windows.zip'
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
 }
@@ -63,7 +63,7 @@ try {
     foreach ($file in @(
         $exePath,
         (Join-Path $PSScriptRoot 'README.md'),
-        (Join-Path $PSScriptRoot 'Start Quiet Run.cmd')
+        (Join-Path $PSScriptRoot 'Start Sleepwalk.cmd')
     )) {
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $archive,
