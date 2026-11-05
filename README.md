@@ -1,6 +1,6 @@
 # Lights Off
 
-A small Windows tray utility for leaving the PC awake while sending connected displays into standby. It runs without administrator access and does not install a service.
+A small Windows tray utility for sending connected displays into standby and optionally keeping the PC awake. Its settings window uses a dark theme, with separate cards for monitor standby and keep-awake sessions. It runs without administrator access and does not install a service.
 
 ## Start it
 
