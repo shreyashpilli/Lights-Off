@@ -1,4 +1,4 @@
-name: Sleepwalk Windows build
+name: Lights Off Windows build
 
 on:
   push:
@@ -24,6 +24,6 @@ jobs:
       - name: Upload Windows package
         uses: actions/upload-artifact@v6
         with:
-          name: Sleepwalk-Windows
-          path: dist/Sleepwalk-Windows.zip
+          name: Lights-Off-Windows
+          path: dist/Lights-Off-Windows.zip
           if-no-files-found: error

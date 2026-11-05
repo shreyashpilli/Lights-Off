@@ -2,19 +2,19 @@
 
 ## Status
 
-Planning document. Sleepwalk has been tested on Windows. There is no Mac or Linux machine available for hands-on testing right now, so builds for those platforms must be described as prototypes until display-off and wake behavior has been checked on real hardware.
+Planning document. Lights Off has been tested on Windows. There is no Mac or Linux machine available for hands-on testing right now, so builds for those platforms must be described as prototypes until display-off and wake behavior has been checked on real hardware.
 
 ## User-facing behavior
 
 The cross-platform feature should keep the existing simple model:
 
 1. One click on the tray or menu bar button starts a session.
-2. Sleepwalk asks the operating system to keep the computer awake, then asks every active display to enter its real standby or power-save state.
+2. Lights Off asks the operating system to keep the computer awake, then asks every active display to enter its real standby or power-save state.
 3. A second click stops the session, requests that displays wake, and releases the keep-awake request.
-4. A timer may stop the session automatically. Closing or crashing Sleepwalk must release the keep-awake request when the operating system permits it.
+4. A timer may stop the session automatically. Closing or crashing Lights Off must release the keep-awake request when the operating system permits it.
 5. Show whether the keep-awake request and display request were accepted. Do not report that a panel physically powered down unless that was actually observed.
 
-The display request must not be a black window or a rendered black image. Sleepwalk should use the operating system's display power path. “Off” means the display's supported standby or power-save mode, not a guarantee that all power has been physically disconnected from the monitor.
+The display request must not be a black window or a rendered black image. Lights Off should use the operating system's display power path. “Off” means the display's supported standby or power-save mode, not a guarantee that all power has been physically disconnected from the monitor.
 
 ## Backend boundary
 
@@ -23,7 +23,7 @@ Keep the session behavior separate from platform calls. Each platform backend sh
 - `CheckSupport`: identify the session type, display interface, and whether required OS services are available.
 - `BeginKeepAwake`: acquire a session-owned sleep-prevention handle and return a clear error if it cannot be acquired.
 - `RequestDisplaysOff`: request standby for all active outputs and report per-output success or failure when the platform exposes it.
-- `RequestDisplaysOn`: request wake for outputs Sleepwalk previously asked to turn off.
+- `RequestDisplaysOn`: request wake for outputs Lights Off previously asked to turn off.
 - `EndKeepAwake`: release the handle. This must also happen when the app exits normally, and should happen automatically when the OS cleans up resources owned by a crashed process.
 
 The app should track separate states for the keep-awake handle and display requests. If turning the displays off fails, release the keep-awake handle instead of silently leaving the computer held awake. If only some outputs fail, report that partial result and provide a way to restore the outputs that did change.

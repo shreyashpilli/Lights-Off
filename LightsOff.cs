@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Sleepwalk")]
+[assembly: AssemblyTitle("Lights Off")]
 [assembly: AssemblyDescription("Keep Windows awake while displays enter standby")]
-[assembly: AssemblyCompany("Sleepwalk")]
-[assembly: AssemblyProduct("Sleepwalk")]
+[assembly: AssemblyCompany("Lights Off")]
+[assembly: AssemblyProduct("Lights Off")]
 [assembly: AssemblyVersion("0.2.0.0")]
 [assembly: AssemblyFileVersion("0.2.0.0")]
 
@@ -74,26 +74,29 @@ internal static class Program
 
             NativeMethods.SetThreadExecutionState(NativeMethods.EsContinuous);
             NativeMethods.SetDisplays(-1); // Wake only; never turn displays off during a smoke check.
-            Console.WriteLine("Sleepwalk startup and Windows power APIs are available.");
+            Console.WriteLine("Lights Off startup and Windows power APIs are available.");
             return 0;
         }
 
         bool createdNew;
-        using (Mutex mutex = new Mutex(true, "Local\\Sleepwalk.SingleInstance", out createdNew))
+        bool legacyCreatedNew;
+        using (Mutex mutex = new Mutex(true, "Local\\LightsOff.SingleInstance", out createdNew))
+        using (Mutex legacyMutex = new Mutex(true, "Local\\Sleepwalk.SingleInstance", out legacyCreatedNew))
         {
-            if (!createdNew)
+            // Share the old mutex during the rename to prevent both app versions running together.
+            if (!createdNew || !legacyCreatedNew)
                 return 0;
 
             NativeMethods.EnablePerMonitorDpiAwareness();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new SleepwalkForm());
+            Application.Run(new LightsOffForm());
         }
         return 0;
     }
 }
 
-internal sealed class SleepwalkForm : Form
+internal sealed class LightsOffForm : Form
 {
     private readonly Button startButton;
     private readonly Button stopButton;
@@ -115,9 +118,9 @@ internal sealed class SleepwalkForm : Form
     private bool exiting;
     private bool displayRequestFailed;
 
-    internal SleepwalkForm()
+    internal LightsOffForm()
     {
-        Text = "Sleepwalk";
+        Text = "Lights Off";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(500, 366);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -227,7 +230,7 @@ internal sealed class SleepwalkForm : Form
         Controls.Add(endTimeHint);
 
         startButton = new Button {
-            Text = "Start Sleepwalk",
+            Text = "Start Lights Off",
             Location = new Point(24, 190),
             Size = new Size(175, 42)
         };
@@ -251,8 +254,8 @@ internal sealed class SleepwalkForm : Form
         Controls.Add(status);
 
         ContextMenuStrip menu = new ContextMenuStrip();
-        menu.Items.Add("Open Sleepwalk", null, delegate { ShowWindow(); });
-        sessionMenuItem = new ToolStripMenuItem("Start Sleepwalk");
+        menu.Items.Add("Open Lights Off", null, delegate { ShowWindow(); });
+        sessionMenuItem = new ToolStripMenuItem("Start Lights Off");
         sessionMenuItem.Click += delegate { ToggleSession(null, EventArgs.Empty); };
         menu.Items.Add(sessionMenuItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -260,7 +263,7 @@ internal sealed class SleepwalkForm : Form
 
         trayIcon = new NotifyIcon {
             Icon = SystemIcons.Application,
-            Text = "Sleepwalk is off",
+            Text = "Lights Off is off",
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -283,7 +286,7 @@ internal sealed class SleepwalkForm : Form
             status.Text = "Enter a custom session length greater than zero.";
             MessageBox.Show(this,
                 "A custom session must be at least 1 minute long.",
-                "Sleepwalk", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
@@ -293,8 +296,8 @@ internal sealed class SleepwalkForm : Form
         {
             status.Text = "Windows could not enable keep-awake mode.";
             MessageBox.Show(this,
-                "Windows could not enable keep-awake mode. Try closing and reopening Sleepwalk.",
-                "Sleepwalk", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Windows could not enable keep-awake mode. Try closing and reopening Lights Off.",
+                "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
@@ -376,14 +379,14 @@ internal sealed class SleepwalkForm : Form
         UpdateTrayText();
         if (!displayRequestFailed)
         {
-            trayIcon.ShowBalloonTip(1800, "Sleepwalk is active",
+            trayIcon.ShowBalloonTip(1800, "Lights Off is active",
                 "Windows accepted the display standby request. The PC is staying awake.",
                 ToolTipIcon.Info);
         }
         else
         {
             trayIcon.ShowBalloonTip(5000, "Display standby request not confirmed",
-                "Sleepwalk is keeping the PC awake, but Windows did not confirm the display request. Check the display connection.",
+                "Lights Off is keeping the PC awake, but Windows did not confirm the display request. Check the display connection.",
                 ToolTipIcon.Warning);
         }
     }
@@ -419,8 +422,8 @@ internal sealed class SleepwalkForm : Form
     {
         if (!active)
         {
-            trayIcon.Text = "Sleepwalk is off";
-            sessionMenuItem.Text = "Start Sleepwalk";
+            trayIcon.Text = "Lights Off is off";
+            sessionMenuItem.Text = "Start Lights Off";
             return;
         }
 
@@ -428,13 +431,13 @@ internal sealed class SleepwalkForm : Form
 
         if (displayRequestFailed)
         {
-            trayIcon.Text = "Sleepwalk: display request failed";
+            trayIcon.Text = "Lights Off: display request failed";
             return;
         }
 
         string sessionText = sessionDeadline.HasValue
-            ? String.Format("Sleepwalk: {0} left", FormatRemaining(sessionDeadline.Value - DateTime.Now))
-            : "Sleepwalk is active";
+            ? String.Format("Lights Off: {0} left", FormatRemaining(sessionDeadline.Value - DateTime.Now))
+            : "Lights Off is active";
         trayIcon.Text = sessionText;
     }
 
@@ -477,19 +480,19 @@ internal sealed class SleepwalkForm : Form
                 : (!wakeSent
                     ? "Windows did not confirm the display wake request."
                     : "Windows did not confirm release of the keep-awake request.");
-            trayIcon.ShowBalloonTip(5000, "Sleepwalk could not confirm every stop request",
+            trayIcon.ShowBalloonTip(5000, "Lights Off could not confirm every stop request",
                 issue + " Press a key or use the monitor's power button if a display stays off.",
                 ToolTipIcon.Warning);
         }
         else if (sessionExpired)
         {
-            trayIcon.ShowBalloonTip(3500, "Sleepwalk session ended",
+            trayIcon.ShowBalloonTip(3500, "Lights Off session ended",
                 "The time limit was reached. Windows power settings are back in control.",
                 ToolTipIcon.Info);
         }
         else
         {
-            trayIcon.ShowBalloonTip(2500, "Sleepwalk stopped",
+            trayIcon.ShowBalloonTip(2500, "Lights Off stopped",
                 "Windows power settings are back in control.",
                 ToolTipIcon.Info);
         }

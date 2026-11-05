@@ -8,21 +8,21 @@ if (-not (Test-Path -LiteralPath $compiler)) {
     $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
 }
 if (-not (Test-Path -LiteralPath $compiler)) {
-    throw 'The .NET Framework C# compiler was not found. Build Sleepwalk on Windows with .NET Framework 4.x installed.'
+    throw 'The .NET Framework C# compiler was not found. Build Lights Off on Windows with .NET Framework 4.x installed.'
 }
 
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$exePath = Join-Path $OutputDirectory 'Sleepwalk.exe'
+$exePath = Join-Path $OutputDirectory 'LightsOff.exe'
 & $compiler /nologo /target:winexe /optimize+ /platform:anycpu `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-    "/out:$exePath" (Join-Path $PSScriptRoot 'Sleepwalk.cs')
+    "/out:$exePath" (Join-Path $PSScriptRoot 'LightsOff.cs')
 if ($LASTEXITCODE -ne 0) {
     throw "C# compilation failed with exit code $LASTEXITCODE."
 }
 
 $smoke = Start-Process -FilePath $exePath -ArgumentList '--self-test' -Wait -PassThru -NoNewWindow
 if ($smoke.ExitCode -ne 0) {
-    throw "Sleepwalk smoke check failed with exit code $($smoke.ExitCode)."
+    throw "Lights Off smoke check failed with exit code $($smoke.ExitCode)."
 }
 
 $gui = Start-Process -FilePath $exePath -PassThru
@@ -34,23 +34,23 @@ try {
     } while ($gui.MainWindowHandle -eq [IntPtr]::Zero -and (Get-Date) -lt $deadline)
 
     if ($gui.MainWindowHandle -eq [IntPtr]::Zero) {
-        throw 'Sleepwalk window did not appear during the GUI smoke check.'
+        throw 'Lights Off window did not appear during the GUI smoke check.'
     }
     if (-not $gui.CloseMainWindow()) {
-        throw 'Sleepwalk window could not be closed cleanly during the GUI smoke check.'
+        throw 'Lights Off window could not be closed cleanly during the GUI smoke check.'
     }
     if (-not $gui.WaitForExit(5000)) {
-        throw 'Sleepwalk did not exit after its window was closed.'
+        throw 'Lights Off did not exit after its window was closed.'
     }
     if ($gui.ExitCode -ne 0) {
-        throw "Sleepwalk exited with code $($gui.ExitCode) during the GUI smoke check."
+        throw "Lights Off exited with code $($gui.ExitCode) during the GUI smoke check."
     }
 }
 finally {
     $gui.Dispose()
 }
 
-$zipPath = Join-Path $OutputDirectory 'Sleepwalk-Windows.zip'
+$zipPath = Join-Path $OutputDirectory 'Lights-Off-Windows.zip'
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
 }
@@ -63,7 +63,7 @@ try {
     foreach ($file in @(
         $exePath,
         (Join-Path $PSScriptRoot 'README.md'),
-        (Join-Path $PSScriptRoot 'Start Sleepwalk.cmd')
+        (Join-Path $PSScriptRoot 'Start Lights Off.cmd')
     )) {
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $archive,

@@ -1,6 +1,6 @@
-# Red Light
+# Redlight
 
-Red Light is a small Windows desktop accessibility filter. It uses the Windows full-screen Magnification API to apply a color transformation to the desktop. It does not create a tinted overlay window, so it does not cover the screen with a separate layer or intercept mouse clicks.
+Redlight is a small Windows desktop accessibility filter. It uses the Windows full-screen Magnification API to apply a color transformation to the desktop. It does not create a tinted overlay window, so it does not cover the screen with a separate layer or intercept mouse clicks.
 
 ## Build
 
@@ -14,12 +14,12 @@ Requirements:
 From the repository root, run:
 
 ```powershell
-cmake -S RedLight -B RedLight/build -G "Visual Studio 17 2022" -A x64
-cmake --build RedLight/build --config Release
-cmake --install RedLight/build --config Release --prefix dist/RedLight
+cmake -S Redlight -B Redlight/build -G "Visual Studio 17 2022" -A x64
+cmake --build Redlight/build --config Release
+cmake --install Redlight/build --config Release --prefix dist/Redlight
 ```
 
-Keep `RedLight.exe` and `RedLightRecovery.exe` in the same folder. Launch `dist/RedLight/RedLight.exe`.
+Keep `Redlight.exe` and `RedlightRecovery.exe` in the same folder. Launch `dist/Redlight/Redlight.exe`.
 
 ## Use
 
@@ -37,7 +37,7 @@ The filter starts off each time the app launches. This avoids leaving an unexpec
 
 ## Recovery and limitations
 
-Red Light saves the active full-screen color effect and magnification transform before changing them. Normal disable, app exit, and the emergency shortcut restore those saved values. A small companion process waits without polling and attempts the same restoration if `RedLight.exe` exits unexpectedly while the filter is active. If both processes are forcibly terminated, Windows crashes, or the display driver stops responding, restoration cannot be guaranteed. Signing out or restarting Windows clears the session state.
+Redlight saves the active full-screen color effect and magnification transform before changing them. Normal disable, app exit, and the emergency shortcut restore those saved values. A small companion process waits without polling and attempts the same restoration if `Redlight.exe` exits unexpectedly while the filter is active. If both processes are forcibly terminated, Windows crashes, or the display driver stops responding, restoration cannot be guaranteed. Signing out or restarting Windows clears the session state.
 
 The full-screen Magnification API is supported on Windows 8 and later and is not supported by 32-bit applications running on 64-bit Windows. This project therefore builds x64 only. The API changes a shared Windows full-screen magnifier transform, so using it at the same time as Windows Magnifier or another app that changes the Magnification API's full-screen effect can conflict. Secure desktop screens, protected video, HDR output, and particular display drivers may not be recolored consistently. Test those cases on the target PC.
 
