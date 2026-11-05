@@ -8,9 +8,19 @@ Download `Sleepwalk-Windows.zip` from the GitHub Releases page, extract it, then
 
 The keep-awake request is released if Sleepwalk exits. Closing the window while a session is active hides it to the tray; use the tray menu's **Exit** command to close the app. The ZIP is portable and does not require an installer.
 
+## Session length
+
+Choose **Until stopped**, **30 minutes**, **1 hour**, **2 hours**, **Custom duration**, or **End at a specific time** before starting. A custom duration can be up to 999 hours and 59 minutes, and must be at least 1 minute. For a clock time that has already passed today, Sleepwalk schedules the end for tomorrow. Timed sessions show the remaining time in the tray tooltip. When the time runs out, Sleepwalk asks Windows to wake the displays and returns the PC to its normal power settings. The default is **Until stopped**, which matches the behavior of v0.1.0.
+
+Sleepwalk reports whether Windows accepted the keep-awake and display requests. Windows accepting a display request does not guarantee every monitor followed it; monitor firmware and connection type still affect standby and wake behavior.
+
+## Red Light
+
+The separate **Red Light** app applies a color matrix through the Windows full-screen Magnification API. It is designed to recolor the whole desktop, including other applications, without placing a tinted window over the screen. See [RedLight/README.md](RedLight/README.md) for its build and run instructions, recovery shortcut, and API limitations.
+
 ## Build from source
 
-On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `Sleepwalk.cs`, runs a smoke check that does not turn displays off, and prints the executable's SHA-256 hash. The original `Sleepwalk.ps1` is retained as a source-run fallback.
+On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `Sleepwalk.cs`, runs a smoke check that does not turn displays off, and prints the executable's SHA-256 hash. After building, **Start Sleepwalk.cmd** launches `dist\Sleepwalk.exe`. The legacy PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for session timers and request status feedback.
 
 ## Limits
 
