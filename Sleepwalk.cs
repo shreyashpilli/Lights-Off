@@ -109,7 +109,7 @@ internal sealed class SleepwalkForm : Form
     private readonly NotifyIcon trayIcon;
     private readonly System.Windows.Forms.Timer offTimer;
     private readonly System.Windows.Forms.Timer sessionTimer;
-    private ToolStripMenuItem stopMenuItem;
+    private ToolStripMenuItem sessionMenuItem;
     private DateTime? sessionDeadline;
     private bool active;
     private bool exiting;
@@ -252,9 +252,9 @@ internal sealed class SleepwalkForm : Form
 
         ContextMenuStrip menu = new ContextMenuStrip();
         menu.Items.Add("Open Sleepwalk", null, delegate { ShowWindow(); });
-        stopMenuItem = new ToolStripMenuItem("Stop and wake displays") { Enabled = false };
-        stopMenuItem.Click += delegate { StopSession(false, true); };
-        menu.Items.Add(stopMenuItem);
+        sessionMenuItem = new ToolStripMenuItem("Start Sleepwalk");
+        sessionMenuItem.Click += delegate { ToggleSession(null, EventArgs.Empty); };
+        menu.Items.Add(sessionMenuItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { exiting = true; StopSession(false, false); Close(); });
 
@@ -264,7 +264,7 @@ internal sealed class SleepwalkForm : Form
             ContextMenuStrip = menu,
             Visible = true
         };
-        trayIcon.DoubleClick += delegate { ShowWindow(); };
+        trayIcon.MouseClick += OnTrayIconMouseClick;
 
         offTimer = new System.Windows.Forms.Timer { Interval = 900 };
         offTimer.Tick += OnDisplayStandbyTimer;
@@ -304,7 +304,6 @@ internal sealed class SleepwalkForm : Form
         startButton.Enabled = false;
         stopButton.Enabled = true;
         durationSelector.Enabled = false;
-        stopMenuItem.Enabled = true;
         UpdateSessionStatus();
         UpdateTrayText();
         offTimer.Start();
@@ -312,6 +311,20 @@ internal sealed class SleepwalkForm : Form
             sessionTimer.Start();
         TopMost = false;
         Hide();
+    }
+
+    private void ToggleSession(object sender, EventArgs e)
+    {
+        if (active)
+            StopSession(false, true);
+        else
+            StartSession(sender, e);
+    }
+
+    private void OnTrayIconMouseClick(object sender, MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+            ToggleSession(sender, EventArgs.Empty);
     }
 
     private bool TryGetSessionDeadline(out DateTime? deadline)
@@ -407,8 +420,11 @@ internal sealed class SleepwalkForm : Form
         if (!active)
         {
             trayIcon.Text = "Sleepwalk is off";
+            sessionMenuItem.Text = "Start Sleepwalk";
             return;
         }
+
+        sessionMenuItem.Text = "Stop and wake displays";
 
         if (displayRequestFailed)
         {
@@ -446,7 +462,6 @@ internal sealed class SleepwalkForm : Form
         startButton.Enabled = true;
         stopButton.Enabled = false;
         durationSelector.Enabled = true;
-        stopMenuItem.Enabled = false;
         status.Text = sessionExpired
             ? "Time limit reached. Windows power settings are back in control."
             : "Session stopped. Windows power settings are back in control.";

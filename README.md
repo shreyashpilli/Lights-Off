@@ -4,9 +4,9 @@ A small Windows tray utility for leaving the PC awake while sending connected di
 
 ## Start it
 
-Download `Sleepwalk-Windows.zip` from the GitHub Releases page, extract it, then double-click **Start Sleepwalk.cmd** or **Sleepwalk.exe**. Click **Start Sleepwalk**. The app stays in the notification area and requests that Windows remain awake. After a short delay, it asks displays to enter standby. Click the Sleepwalk tray icon and choose **Stop and wake displays** to end the session.
+Download `Sleepwalk-Windows.zip` from the GitHub Releases page, extract it, then double-click **Start Sleepwalk.cmd** or **Sleepwalk.exe**. Click **Start Sleepwalk**. The app stays in the notification area and requests that Windows remain awake. After a short delay, it asks displays to enter standby. Left-click the tray icon again to end the session and wake displays.
 
-The keep-awake request is released if Sleepwalk exits. Closing the window while a session is active hides it to the tray; use the tray menu's **Exit** command to close the app. The ZIP is portable and does not require an installer.
+The keep-awake request is released if Sleepwalk exits. Left-click the Sleepwalk tray icon to start or stop a session. Closing the window while a session is active hides it to the tray; right-click the tray icon for settings or the **Exit** command. The ZIP is portable and does not require an installer.
 
 ## Session length
 
