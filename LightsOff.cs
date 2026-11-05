@@ -35,11 +35,11 @@ internal static class NativeMethods
         IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         uint flags, uint timeout, out IntPtr result);
 
-    internal static bool SetDisplays(int powerState)
+    internal static bool RequestDisplaysStandby()
     {
         IntPtr result;
         IntPtr sent = SendMessageTimeout(HwndBroadcast, WmSysCommand, ScMonitorPower,
-            new IntPtr(powerState), SmtoAbortIfHung, 1500, out result);
+            new IntPtr(2), SmtoAbortIfHung, 1500, out result);
         return sent != IntPtr.Zero;
     }
 
@@ -73,7 +73,6 @@ internal static class Program
             }
 
             NativeMethods.SetThreadExecutionState(NativeMethods.EsContinuous);
-            NativeMethods.SetDisplays(-1); // Wake only; never turn displays off during a smoke check.
             Console.WriteLine("Lights Off startup and Windows power APIs are available.");
             return 0;
         }
@@ -238,7 +237,7 @@ internal sealed class LightsOffForm : Form
         Controls.Add(startButton);
 
         stopButton = new Button {
-            Text = "Stop and wake displays",
+            Text = "Stop session",
             Location = new Point(210, 190),
             Size = new Size(188, 42),
             Enabled = false
@@ -375,7 +374,7 @@ internal sealed class LightsOffForm : Form
         if (!active)
             return;
 
-        displayRequestFailed = !NativeMethods.SetDisplays(2);
+        displayRequestFailed = !NativeMethods.RequestDisplaysStandby();
         UpdateTrayText();
         if (!displayRequestFailed)
         {
@@ -427,7 +426,7 @@ internal sealed class LightsOffForm : Form
             return;
         }
 
-        sessionMenuItem.Text = "Stop and wake displays";
+        sessionMenuItem.Text = "Stop session";
 
         if (displayRequestFailed)
         {
@@ -457,7 +456,6 @@ internal sealed class LightsOffForm : Form
 
         offTimer.Stop();
         sessionTimer.Stop();
-        bool wakeSent = NativeMethods.SetDisplays(-1);
         uint keepAwakeCleared = NativeMethods.SetThreadExecutionState(NativeMethods.EsContinuous);
         active = false;
         sessionDeadline = null;
@@ -473,15 +471,10 @@ internal sealed class LightsOffForm : Form
         if (!notifyUser)
             return;
 
-        if (!wakeSent || keepAwakeCleared == 0)
+        if (keepAwakeCleared == 0)
         {
-            string issue = !wakeSent && keepAwakeCleared == 0
-                ? "Windows did not confirm display wake or release of the keep-awake request."
-                : (!wakeSent
-                    ? "Windows did not confirm the display wake request."
-                    : "Windows did not confirm release of the keep-awake request.");
-            trayIcon.ShowBalloonTip(5000, "Lights Off could not confirm every stop request",
-                issue + " Press a key or use the monitor's power button if a display stays off.",
+            trayIcon.ShowBalloonTip(5000, "Lights Off could not confirm the stop request",
+                "Windows did not confirm release of the keep-awake request.",
                 ToolTipIcon.Warning);
         }
         else if (sessionExpired)

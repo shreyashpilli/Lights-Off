@@ -4,7 +4,7 @@ A small Windows tray utility for leaving the PC awake while sending connected di
 
 ## Start it
 
-For a Lights Off build, extract the Windows ZIP, then double-click **Start Lights Off.cmd** or **LightsOff.exe**. Click **Start Lights Off**. The app stays in the notification area and requests that Windows remain awake. After a short delay, it asks displays to enter standby. Left-click the tray icon again to end the session and wake displays. The published v0.1.0 archive is historical and still has the older filenames.
+For a Lights Off build, extract the Windows ZIP, then double-click **Start Lights Off.cmd** or **LightsOff.exe**. Click **Start Lights Off**. The app stays in the notification area and requests that Windows remain awake. After a short delay, it asks displays to enter standby. Left-click the tray icon again or choose **Stop session** to release the keep-awake request. Lights Off does not send a display-on command when you stop; displays respond to your input normally. The published v0.1.0 archive is historical and still has the older filenames.
 
 The keep-awake request is released if Lights Off exits. Left-click the Lights Off tray icon to start or stop a session. Closing the window while a session is active hides it to the tray; right-click the tray icon for settings or the **Exit** command. The ZIP is portable and does not require an installer.
 
@@ -20,13 +20,13 @@ The separate **Redlight** app applies a color matrix through the Windows full-sc
 
 ## Build from source
 
-On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `LightsOff.cs`, runs a smoke check that does not turn displays off, and prints the executable's SHA-256 hash. After building, **Start Lights Off.cmd** launches `dist\LightsOff.exe`. The legacy PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for session timers and request status feedback.
+On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `LightsOff.cs`, runs a smoke check that does not alter display power, and prints the executable's SHA-256 hash. After building, **Start Lights Off.cmd** launches `dist\LightsOff.exe`. The PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for session timers and request status feedback.
 
 ## Limits
 
 - This keeps Windows in its normal running state. It does not make CPU or GPU work continue through Sleep.
 - Display standby is not the same as cutting power to the monitor. The monitor may use a small amount of standby power.
-- Windows and monitor firmware control display wake behavior. Keyboard or mouse activity may wake the displays, and some monitors may not respond to the software wake request.
+- Windows and monitor firmware control display wake behavior. Keyboard or mouse activity wakes the displays; Lights Off does not force them on when a session stops.
 - The PC must stay signed in with this app running for its keep-awake request to remain active.
 
 Lights Off uses only Windows PowerShell, Windows Forms, and Windows APIs included with Windows. It does not install a service or require administrator access.
