@@ -10,6 +10,8 @@ For a Lights Off build, extract the Windows ZIP, then double-click **Start Light
 
 The keep-awake request is released if Lights Off exits. Closing the window while a session is active hides it to the tray; right-click the tray icon to open settings, toggle **Keep PC awake**, or exit. The ZIP is portable and does not require an installer.
 
+Global shortcuts default to **Ctrl+Alt+M** to turn off the monitors and **Ctrl+Alt+K** to toggle keep-awake. Change either shortcut from **Keyboard shortcuts…** in the app window or tray menu. If Windows reports a shortcut is already in use, choose a different combination.
+
 ## Session length
 
 Keep-awake can be indefinite or timed. The window has three preset durations and a custom whole-minute entry. Timed sessions show the remaining time in the tray tooltip. When the time runs out, Lights Off releases the keep-awake request and returns the PC to its normal sleep settings without changing the displays' current state.

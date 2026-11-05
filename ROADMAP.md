@@ -33,7 +33,7 @@ Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPP
 
 ## v0.3: Faster controls
 
-- Add a configurable keyboard shortcut to start a session or allow normal sleep.
+- Add configurable global shortcuts for monitor standby and keep-awake.
 - Keep the tray menu as a visible fallback when the shortcut is unavailable or conflicts with another app.
 - Add a small settings screen for the shortcut and default session length.
 

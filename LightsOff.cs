@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -19,6 +20,9 @@ internal static class NativeMethods
     internal const uint EsSystemRequired = 0x00000001;
     internal const uint WmSysCommand = 0x0112;
     internal const uint SmtoAbortIfHung = 0x0002;
+    internal const int WmHotkey = 0x0312;
+    internal const uint ModAlt = 0x0001;
+    internal const uint ModControl = 0x0002;
     internal static readonly IntPtr HwndBroadcast = new IntPtr(0xffff);
     internal static readonly IntPtr ScMonitorPower = new IntPtr(0xF170);
 
@@ -39,6 +43,12 @@ internal static class NativeMethods
     internal static extern IntPtr SendMessageTimeout(
         IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         uint flags, uint timeout, out IntPtr result);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern bool UnregisterHotKey(IntPtr hwnd, int id);
 
     internal static bool RequestDisplaysStandby()
     {
@@ -102,6 +112,14 @@ internal static class Program
 
 internal sealed class LightsOffForm : Form
 {
+    private const int HotkeyMonitorStandby = 1;
+    private const int HotkeyToggleKeepAwake = 2;
+    private uint monitorModifiers = NativeMethods.ModControl | NativeMethods.ModAlt;
+    private Keys monitorKey = Keys.M;
+    private uint awakeModifiers = NativeMethods.ModControl | NativeMethods.ModAlt;
+    private Keys awakeKey = Keys.K;
+    private bool monitorHotkeyRegistered;
+    private bool awakeHotkeyRegistered;
     private readonly ActionButton displayButton;
     private readonly ActionButton stopButton;
     private readonly ActionButton customStartButton;
@@ -333,17 +351,29 @@ internal sealed class LightsOffForm : Form
         stopButton.Click += delegate { StopSession(false, true); };
         statusPanel.Controls.Add(stopButton);
 
-        Label footer = new Label {
-            Text = "Monitor standby uses the display's normal low-power state.",
-            ForeColor = Color.FromArgb(126, 131, 145),
+        LinkLabel shortcutsLink = new LinkLabel {
+            Text = "Keyboard shortcuts…",
+            LinkColor = Color.FromArgb(165, 168, 255),
+            ActiveLinkColor = Color.FromArgb(190, 192, 255),
+            BackColor = Color.Transparent,
             Font = new Font("Segoe UI", 8.5F),
             Location = new Point(20, 520),
-            Size = new Size(470, 20)
+            Size = new Size(145, 20)
+        };
+        shortcutsLink.LinkClicked += delegate { ShowShortcutSettings(); };
+        Controls.Add(shortcutsLink);
+        Label footer = new Label {
+            Text = "Monitor standby uses normal low-power mode.",
+            ForeColor = Color.FromArgb(126, 131, 145),
+            Font = new Font("Segoe UI", 8.5F),
+            Location = new Point(170, 520),
+            Size = new Size(320, 20)
         };
         Controls.Add(footer);
 
         ContextMenuStrip menu = new ContextMenuStrip();
         menu.Items.Add("Open Lights Off", null, delegate { ShowWindow(); });
+        menu.Items.Add("Keyboard shortcuts…", null, delegate { ShowShortcutSettings(); });
         sessionMenuItem = new ToolStripMenuItem("Keep PC awake") { CheckOnClick = true };
         sessionMenuItem.Click += OnTrayKeepAwakeClicked;
         menu.Items.Add(sessionMenuItem);
@@ -625,6 +655,8 @@ internal sealed class LightsOffForm : Form
         }
 
         StopSession(false, false);
+        NativeMethods.UnregisterHotKey(Handle, HotkeyMonitorStandby);
+        NativeMethods.UnregisterHotKey(Handle, HotkeyToggleKeepAwake);
         offTimer.Dispose();
         sessionTimer.Dispose();
         pulseTimer.Dispose();
@@ -658,6 +690,8 @@ internal sealed class LightsOffForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+        LoadShortcutSettings();
+        RegisterShortcuts();
         try
         {
             int darkMode = 1;
@@ -667,6 +701,147 @@ internal sealed class LightsOffForm : Form
         }
         catch (DllNotFoundException) { }
         catch (EntryPointNotFoundException) { }
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        if (message.Msg == NativeMethods.WmHotkey)
+        {
+            int id = message.WParam.ToInt32();
+            if (id == HotkeyMonitorStandby)
+                RequestDisplaysStandby(false);
+            else if (id == HotkeyToggleKeepAwake)
+            {
+                if (active) StopSession(false, true);
+                else StartKeepAwake(null);
+            }
+        }
+        base.WndProc(ref message);
+    }
+
+    private static string ShortcutSettingsPath
+    {
+        get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lights Off", "hotkeys.ini"); }
+    }
+
+    private void LoadShortcutSettings()
+    {
+        try
+        {
+            string[] lines = File.ReadAllLines(ShortcutSettingsPath);
+            uint parsedModifiers;
+            int parsedKey;
+            if (lines.Length >= 4 && UInt32.TryParse(lines[0], out parsedModifiers) && Int32.TryParse(lines[1], out parsedKey))
+            { monitorModifiers = parsedModifiers; monitorKey = (Keys)parsedKey; }
+            if (lines.Length >= 4 && UInt32.TryParse(lines[2], out parsedModifiers) && Int32.TryParse(lines[3], out parsedKey))
+            { awakeModifiers = parsedModifiers; awakeKey = (Keys)parsedKey; }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private void RegisterShortcuts()
+    {
+        monitorHotkeyRegistered = NativeMethods.RegisterHotKey(Handle, HotkeyMonitorStandby, monitorModifiers, (uint)monitorKey);
+        awakeHotkeyRegistered = NativeMethods.RegisterHotKey(Handle, HotkeyToggleKeepAwake, awakeModifiers, (uint)awakeKey);
+        if (!monitorHotkeyRegistered || !awakeHotkeyRegistered)
+            status.Text = "A shortcut is unavailable. Change it below.";
+    }
+
+    private void ShowShortcutSettings()
+    {
+        NativeMethods.UnregisterHotKey(Handle, HotkeyMonitorStandby);
+        NativeMethods.UnregisterHotKey(Handle, HotkeyToggleKeepAwake);
+        using (Form dialog = new Form())
+        {
+            dialog.Text = "Keyboard shortcuts";
+            dialog.StartPosition = FormStartPosition.CenterParent;
+            dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+            dialog.MaximizeBox = false;
+            dialog.MinimizeBox = false;
+            dialog.ClientSize = new Size(370, 205);
+            dialog.BackColor = Color.FromArgb(18, 19, 22);
+            dialog.ForeColor = Color.FromArgb(237, 239, 244);
+
+            Label hint = new Label { Text = "Click a box, then press the shortcut you want.", Location = new Point(18, 18), Size = new Size(330, 24), ForeColor = Color.FromArgb(165, 170, 184) };
+            TextBox monitorBox = CreateShortcutBox(dialog, "Turn monitors off", 58, monitorModifiers, monitorKey);
+            TextBox awakeBox = CreateShortcutBox(dialog, "Toggle keep-awake", 103, awakeModifiers, awakeKey);
+            Button save = new Button { Text = "Save shortcuts", Location = new Point(220, 155), Size = new Size(130, 32), DialogResult = DialogResult.OK };
+            dialog.Controls.Add(hint);
+            dialog.Controls.Add(save);
+            dialog.AcceptButton = save;
+            if (dialog.ShowDialog(this) != DialogResult.OK) { RegisterShortcuts(); return; }
+
+            uint newMonitorMods, newAwakeMods;
+            Keys newMonitorKey, newAwakeKey;
+            if (!TryParseShortcut(monitorBox.Tag as string, out newMonitorMods, out newMonitorKey) ||
+                !TryParseShortcut(awakeBox.Tag as string, out newAwakeMods, out newAwakeKey) ||
+                (newMonitorMods == newAwakeMods && newMonitorKey == newAwakeKey))
+            {
+                RegisterShortcuts();
+                MessageBox.Show(this, "Choose two different shortcuts, each with a modifier key.", "Keyboard shortcuts", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            NativeMethods.UnregisterHotKey(Handle, HotkeyMonitorStandby);
+            NativeMethods.UnregisterHotKey(Handle, HotkeyToggleKeepAwake);
+            bool first = NativeMethods.RegisterHotKey(Handle, HotkeyMonitorStandby, newMonitorMods, (uint)newMonitorKey);
+            bool second = first && NativeMethods.RegisterHotKey(Handle, HotkeyToggleKeepAwake, newAwakeMods, (uint)newAwakeKey);
+            if (!first || !second)
+            {
+                NativeMethods.UnregisterHotKey(Handle, HotkeyMonitorStandby);
+                NativeMethods.UnregisterHotKey(Handle, HotkeyToggleKeepAwake);
+                RegisterShortcuts();
+                MessageBox.Show(this, "Windows could not register one of those shortcuts. It may already be used by another app.", "Keyboard shortcuts", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            monitorModifiers = newMonitorMods; monitorKey = newMonitorKey;
+            awakeModifiers = newAwakeMods; awakeKey = newAwakeKey;
+            monitorHotkeyRegistered = awakeHotkeyRegistered = true;
+            string directory = Path.GetDirectoryName(ShortcutSettingsPath);
+            Directory.CreateDirectory(directory);
+            File.WriteAllLines(ShortcutSettingsPath, new string[] { monitorModifiers.ToString(), ((int)monitorKey).ToString(), awakeModifiers.ToString(), ((int)awakeKey).ToString() });
+        }
+    }
+
+    private TextBox CreateShortcutBox(Form dialog, string caption, int y, uint modifiers, Keys key)
+    {
+        Label label = new Label { Text = caption, Location = new Point(18, y + 3), Size = new Size(150, 24) };
+        TextBox box = new TextBox { ReadOnly = true, Text = FormatShortcut(modifiers, key), Location = new Point(175, y), Size = new Size(175, 26), Tag = modifiers + ":" + (int)key };
+        box.KeyDown += delegate(object sender, KeyEventArgs e) {
+            e.SuppressKeyPress = true;
+            Keys mods = e.Modifiers & (Keys.Control | Keys.Alt | Keys.Shift);
+            Keys keyCode = e.KeyCode;
+            if (keyCode == Keys.ControlKey || keyCode == Keys.Menu || keyCode == Keys.ShiftKey) return;
+            uint nativeMods = 0;
+            if ((mods & Keys.Control) != 0) nativeMods |= NativeMethods.ModControl;
+            if ((mods & Keys.Alt) != 0) nativeMods |= NativeMethods.ModAlt;
+            if ((mods & Keys.Shift) != 0) nativeMods |= 0x0004;
+            box.Tag = nativeMods + ":" + (int)keyCode;
+            box.Text = FormatShortcut(nativeMods, keyCode);
+        };
+        dialog.Controls.Add(label); dialog.Controls.Add(box);
+        return box;
+    }
+
+    private static string FormatShortcut(uint modifiers, Keys key)
+    {
+        string text = String.Empty;
+        if ((modifiers & NativeMethods.ModControl) != 0) text += "Ctrl+";
+        if ((modifiers & NativeMethods.ModAlt) != 0) text += "Alt+";
+        if ((modifiers & 0x0004) != 0) text += "Shift+";
+        return text + key.ToString();
+    }
+
+    private static bool TryParseShortcut(string value, out uint modifiers, out Keys key)
+    {
+        modifiers = 0; key = Keys.None;
+        if (String.IsNullOrEmpty(value)) return false;
+        string[] parts = value.Split(':'); int parsedMods, parsedKey;
+        if (parts.Length != 2 || !Int32.TryParse(parts[0], out parsedMods) || !Int32.TryParse(parts[1], out parsedKey)) return false;
+        modifiers = (uint)parsedMods; key = (Keys)parsedKey;
+        return modifiers != 0 && key != Keys.None;
     }
 }
 
