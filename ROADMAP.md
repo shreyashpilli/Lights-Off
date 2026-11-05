@@ -1,8 +1,8 @@
-# Sleepwalk roadmap proposal
+# Lights Off roadmap proposal
 
 ## Current release
 
-Sleepwalk v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks connected displays to enter standby, and provides a tray action to stop the session and wake the displays.
+Lights Off v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks connected displays to enter standby, and provides a tray action to stop the session and wake the displays.
 
 ## v0.2: Safer sessions
 
@@ -10,17 +10,19 @@ Sleepwalk v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks co
 2. Add session lengths: 30 minutes, 1 hour, 2 hours, custom duration, end at a selected clock time, and until stopped.
 3. Show the remaining time in the tray tooltip. When a timed session ends, request display wake and return Windows to its normal power settings.
 
-Red Light is a separate Windows accessibility app in `RedLight/`. It uses the Windows full-screen Magnification API instead of a desktop overlay.
+Redlight is a separate Windows accessibility app in `Redlight/`. It uses the Windows full-screen Magnification API instead of a desktop overlay.
+
+Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md). The first targets are a native macOS menu bar app and Linux X11 plus explicitly detected Wayland compositor support. Mac and Linux builds remain experimental until tested with real displays.
 
 ### Acceptance checks
 
-- A test workload continues running while Sleepwalk is active and the displays are in standby.
+- A test workload continues running while Lights Off is active and the displays are in standby.
 - The tray state clearly distinguishes an active session from a failed display request.
 - A timed session ends at the selected time, releases the keep-awake request, and requests display wake.
-- An indefinite session continues until the user stops it or exits Sleepwalk.
+- An indefinite session continues until the user stops it or exits Lights Off.
 - A custom duration and selected clock time produce the expected end time, including the next-day case.
 
-## Red Light application
+## Redlight application
 
 - Use the Windows Magnification API for a full-desktop color transform.
 - Provide an intensity slider, two red color modes, global shortcuts, a tray icon, and startup controls.
@@ -35,6 +37,7 @@ Red Light is a separate Windows accessibility app in `RedLight/`. It uses the Wi
 
 ## Later distribution work
 
+- Implement and verify Mac and Linux power-control adapters using the platform plan.
 - Add a custom app icon and improve first-run instructions.
 - Automate versioned GitHub releases from tags.
 - Consider code signing if distribution beyond a small group makes Windows reputation warnings a problem.
@@ -42,4 +45,4 @@ Red Light is a separate Windows accessibility app in `RedLight/`. It uses the Wi
 ## Out of scope for now
 
 - Sending vendor-specific DDC/CI power commands to force monitor power-off. Support and wake behavior vary by monitor, and the tested standby request already works on the target setup.
-- Detecting whether a particular AI agent is running. Sleepwalk should remain useful for any long-running workload.
+- Detecting whether a particular AI agent is running. Lights Off should remain useful for any long-running workload.

@@ -16,5 +16,5 @@ struct RecoveryState {
 };
 
 inline void MakeRecoveryMappingName(DWORD processId, wchar_t* buffer, size_t capacity) {
-    swprintf_s(buffer, capacity, L"Local\\RedLight-Recovery-%lu", processId);
+    swprintf_s(buffer, capacity, L"Local\\Redlight-Recovery-%lu", processId);
 }

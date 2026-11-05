@@ -17,8 +17,8 @@
 #pragma comment(lib, "UxTheme.lib")
 
 namespace {
-constexpr wchar_t kWindowClass[] = L"RedLight.MainWindow";
-constexpr wchar_t kAppName[] = L"Red Light";
+constexpr wchar_t kWindowClass[] = L"Redlight.MainWindow";
+constexpr wchar_t kAppName[] = L"Redlight";
 constexpr UINT kTrayMessage = WM_APP + 1;
 constexpr UINT kToggleHotkey = 1;
 constexpr UINT kRestoreHotkey = 2;
@@ -140,11 +140,11 @@ std::wstring ParentDirectory(const std::wstring& path) {
 std::wstring GetSettingsPath() {
     PWSTR appData = nullptr;
     if (FAILED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_CREATE, nullptr, &appData)))
-        return L"RedLight.ini";
+        return L"Redlight.ini";
 
     std::wstring folder(appData);
     CoTaskMemFree(appData);
-    folder += L"\\RedLight";
+    folder += L"\\Redlight";
     CreateDirectoryW(folder.c_str(), nullptr);
     return folder + L"\\settings.ini";
 }
@@ -208,7 +208,7 @@ void UpdateHotkeyLabel(App& app) {
 void UpdateToggleButton(App& app) {
     if (app.toggleButton) SetWindowTextW(app.toggleButton, app.filterEnabled ? L"Disable red filter" : L"Enable red filter");
     if (app.tray.cbSize) {
-        wcsncpy_s(app.tray.szTip, app.filterEnabled ? L"Red Light is on" : L"Red Light is off", _TRUNCATE);
+        wcsncpy_s(app.tray.szTip, app.filterEnabled ? L"Redlight is on" : L"Redlight is off", _TRUNCATE);
         Shell_NotifyIconW(NIM_MODIFY, &app.tray);
     }
 }
@@ -227,7 +227,7 @@ bool StartRecoveryHelper(App& app) {
     ZeroMemory(app.recoveryState, sizeof(RecoveryState));
     app.recoveryState->signature = kRecoverySignature;
 
-    const std::wstring helperPath = ParentDirectory(GetModulePath()) + L"\\RedLightRecovery.exe";
+    const std::wstring helperPath = ParentDirectory(GetModulePath()) + L"\\RedlightRecovery.exe";
     const std::wstring commandLine = L"\"" + helperPath + L"\" " + std::to_wstring(GetCurrentProcessId());
     std::wstring mutableCommandLine = commandLine;
     STARTUPINFOW startup{};
@@ -288,9 +288,9 @@ bool ApplyCurrentEffect(App& app) {
 bool EnableFilter(App& app) {
     if (app.filterEnabled) return true;
     if (!app.recoveryProcess || WaitForSingleObject(app.recoveryProcess, 0) != WAIT_TIMEOUT) {
-        SetStatus(app, L"Recovery helper is unavailable. Restart Red Light before enabling the filter.");
+        SetStatus(app, L"Recovery helper is unavailable. Restart Redlight before enabling the filter.");
         MessageBoxW(app.window,
-            L"The recovery helper could not be started. Keep RedLightRecovery.exe beside RedLight.exe and restart the app before enabling the filter.",
+            L"The recovery helper could not be started. Keep RedlightRecovery.exe beside Redlight.exe and restart the app before enabling the filter.",
             kAppName, MB_OK | MB_ICONERROR);
         return false;
     }
@@ -336,7 +336,7 @@ bool EnableFilter(App& app) {
         RestoreSavedColors(app, false);
         SetStatus(app, L"Windows could not apply the full-screen color filter.");
         MessageBoxW(app.window,
-            L"Windows could not apply the full-screen color filter. Red Light attempted to restore the original colors.",
+            L"Windows could not apply the full-screen color filter. Redlight attempted to restore the original colors.",
             kAppName, MB_OK | MB_ICONERROR);
         UpdateToggleButton(app);
         return false;
@@ -362,11 +362,11 @@ bool SetStartupRegistration(bool enabled) {
     bool success = false;
     if (enabled) {
         const std::wstring command = L"\"" + GetModulePath() + L"\" --startup";
-        success = RegSetValueExW(key, L"RedLight", 0, REG_SZ,
+        success = RegSetValueExW(key, L"Redlight", 0, REG_SZ,
             reinterpret_cast<const BYTE*>(command.c_str()),
             static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t))) == ERROR_SUCCESS;
     } else {
-        const LONG result = RegDeleteValueW(key, L"RedLight");
+        const LONG result = RegDeleteValueW(key, L"Redlight");
         success = result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND;
     }
     RegCloseKey(key);
@@ -471,7 +471,7 @@ void CreateSettingsUi(App& app) {
 
     HWND title = CreateControl(app, L"STATIC", kAppName, SS_LEFT, 28, 22, 440, 42, 0);
     SendMessageW(title, WM_SETFONT, reinterpret_cast<WPARAM>(app.titleFont), TRUE);
-    CreateControl(app, L"STATIC", L"A system-wide red light filter for your desktop", SS_LEFT, 30, 67, 480, 28, 0);
+    CreateControl(app, L"STATIC", L"A system-wide redlight filter for your desktop", SS_LEFT, 30, 67, 480, 28, 0);
 
     app.toggleButton = CreateControl(app, L"BUTTON", L"Enable red filter", BS_OWNERDRAW | WS_TABSTOP,
         30, 112, 500, 48, kToggleCommand);
@@ -520,7 +520,7 @@ bool AddTrayIcon(App& app) {
     app.tray.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     app.tray.uCallbackMessage = kTrayMessage;
     app.tray.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
-    wcsncpy_s(app.tray.szTip, L"Red Light is off", _TRUNCATE);
+    wcsncpy_s(app.tray.szTip, L"Redlight is off", _TRUNCATE);
     if (!Shell_NotifyIconW(NIM_ADD, &app.tray)) return false;
     app.tray.uVersion = NOTIFYICON_VERSION_4;
     Shell_NotifyIconW(NIM_SETVERSION, &app.tray);
@@ -561,7 +561,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     case WM_CREATE: {
         CreateSettingsUi(*app);
         if (!StartRecoveryHelper(*app)) {
-            SetStatus(*app, L"Recovery helper did not start. Keep RedLightRecovery.exe beside this app.");
+            SetStatus(*app, L"Recovery helper did not start. Keep RedlightRecovery.exe beside this app.");
         }
         RegisterHotkeys(*app);
         AddTrayIcon(*app);
@@ -621,7 +621,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 } else {
                     app->settings.startWithWindows = enabled;
                     SaveSetting(*app, L"StartWithWindows", enabled ? 1 : 0);
-                    SetStatus(*app, enabled ? L"Red Light will start when you sign in." : L"Windows startup disabled.");
+                    SetStatus(*app, enabled ? L"Redlight will start when you sign in." : L"Windows startup disabled.");
                 }
             }
             return 0;
@@ -731,7 +731,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int showCommand) {
-    HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\RedLight.SingleInstance");
+    HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\Redlight.SingleInstance");
     if (!singleInstance || GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND existing = FindWindowW(kWindowClass, kAppName);
         if (existing) {
