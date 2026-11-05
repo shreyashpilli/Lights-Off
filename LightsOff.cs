@@ -112,6 +112,8 @@ internal sealed class LightsOffForm : Form
     private readonly Label statusDot;
     private readonly DarkSwitch keepAwakeToggle;
     private readonly TextBox customMinutes;
+    private readonly Icon normalSleepIcon;
+    private readonly Icon keepAwakeIcon;
     private readonly NotifyIcon trayIcon;
     private readonly System.Windows.Forms.Timer offTimer;
     private readonly System.Windows.Forms.Timer sessionTimer;
@@ -126,7 +128,10 @@ internal sealed class LightsOffForm : Form
 
     internal LightsOffForm()
     {
+        normalSleepIcon = LoadIconResource("LightsOff.TrayNormal.ico");
+        keepAwakeIcon = LoadIconResource("LightsOff.TrayAwake.ico");
         Text = "Lights Off";
+        Icon = normalSleepIcon;
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(520, 548);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -346,7 +351,7 @@ internal sealed class LightsOffForm : Form
         menu.Items.Add("Exit", null, delegate { exiting = true; StopSession(false, false); Close(); });
 
         trayIcon = new NotifyIcon {
-            Icon = SystemIcons.Application,
+            Icon = normalSleepIcon,
             Text = "Lights Off is off",
             ContextMenuStrip = menu,
             Visible = true
@@ -519,6 +524,7 @@ internal sealed class LightsOffForm : Form
         if (!active)
         {
             trayIcon.Text = "Lights Off is off";
+            trayIcon.Icon = normalSleepIcon;
             sessionMenuItem.Checked = false;
             keepAwakeToggle.Checked = false;
             stopButton.Visible = false;
@@ -529,6 +535,7 @@ internal sealed class LightsOffForm : Form
         }
 
         sessionMenuItem.Checked = true;
+        trayIcon.Icon = keepAwakeIcon;
         keepAwakeToggle.Checked = !sessionDeadline.HasValue;
         stopButton.Visible = true;
         UpdatePresetButtons();
@@ -623,6 +630,8 @@ internal sealed class LightsOffForm : Form
         pulseTimer.Dispose();
         trayIcon.Visible = false;
         trayIcon.Dispose();
+        normalSleepIcon.Dispose();
+        keepAwakeIcon.Dispose();
     }
 
     private void UpdatePresetButtons()
@@ -633,6 +642,17 @@ internal sealed class LightsOffForm : Form
         preset30Button.ForeColor = preset30Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
         preset60Button.ForeColor = preset60Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
         preset120Button.ForeColor = preset120Button.Selected ? Color.FromArgb(30, 25, 15) : Color.FromArgb(237, 239, 244);
+    }
+
+    private static Icon LoadIconResource(string resourceName)
+    {
+        using (System.IO.Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+        {
+            if (stream == null)
+                throw new InvalidOperationException("Missing embedded icon resource: " + resourceName);
+            using (Icon icon = new Icon(stream))
+                return (Icon)icon.Clone();
+        }
     }
 
     protected override void OnHandleCreated(EventArgs e)

@@ -2,6 +2,8 @@
 
 A small Windows tray utility for sending connected displays into standby and optionally keeping the PC awake. Its settings window uses a dark theme, with separate cards for monitor standby and keep-awake sessions. It runs without administrator access and does not install a service.
 
+The tray icon changes from a violet moonlit monitor during normal sleep settings to an amber-marked monitor while keep-awake is active.
+
 ## Start it
 
 For a Lights Off build, extract the Windows ZIP, then double-click **Start Lights Off.cmd** or **LightsOff.exe**. Left-click the tray icon to ask the monitors to enter standby. This does not change Windows' normal sleep settings. Right-click the icon and turn on **Keep PC awake** to prevent the PC from sleeping; turn it off to return to normal sleep settings. In the app window, choose **30 minutes**, **1 hour**, **2 hours**, or enter a custom number of minutes. The timer returns the PC to its normal sleep settings when it ends. Monitor standby is not a hard power-off. The published v0.1.0 archive is historical and still has the older filenames.
