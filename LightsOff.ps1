@@ -1,6 +1,9 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+$script:normalIcon = New-Object System.Drawing.Icon((Join-Path $PSScriptRoot 'assets\LightsOff-Normal.ico'))
+$script:awakeIcon = New-Object System.Drawing.Icon((Join-Path $PSScriptRoot 'assets\LightsOff-Awake.ico'))
+
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -45,6 +48,7 @@ function Stop-LightsOff {
     $stopButton.Enabled = $false
     $sessionItem.Checked = $false
     $notifyIcon.Text = 'Lights Off is off'
+    $notifyIcon.Icon = $script:normalIcon
 }
 
 $form = New-Object System.Windows.Forms.Form
@@ -92,7 +96,7 @@ $status.Size = New-Object System.Drawing.Size(374, 28)
 $form.Controls.Add($status)
 
 $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
-$notifyIcon.Icon = [System.Drawing.SystemIcons]::Application
+$notifyIcon.Icon = $script:normalIcon
 $notifyIcon.Text = 'Lights Off is off'
 $notifyIcon.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -138,6 +142,7 @@ $startButton.Add_Click({
     $sessionItem.Checked = $true
     $status.Text = 'PC awake. Displays will enter standby in a moment.'
     $notifyIcon.Text = 'Lights Off is active'
+    $notifyIcon.Icon = $script:awakeIcon
     $offTimer.Start()
     $form.Hide()
 })
@@ -153,6 +158,8 @@ $form.Add_FormClosing({
     $offTimer.Dispose()
     $notifyIcon.Visible = $false
     $notifyIcon.Dispose()
+    $script:normalIcon.Dispose()
+    $script:awakeIcon.Dispose()
 })
 
 [void][System.Windows.Forms.Application]::Run($form)

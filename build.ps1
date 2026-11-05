@@ -12,9 +12,17 @@ if (-not (Test-Path -LiteralPath $compiler)) {
 }
 
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
+$normalIcon = Join-Path $PSScriptRoot 'assets\LightsOff-Normal.ico'
+$awakeIcon = Join-Path $PSScriptRoot 'assets\LightsOff-Awake.ico'
+if (-not (Test-Path -LiteralPath $normalIcon) -or -not (Test-Path -LiteralPath $awakeIcon)) {
+    throw 'Tray icon assets are missing. Run .\tools\GenerateTrayIcons.ps1 first.'
+}
 $exePath = Join-Path $OutputDirectory 'LightsOff.exe'
 & $compiler /nologo /target:winexe /optimize+ /platform:anycpu `
     /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
+    "/win32icon:$normalIcon" `
+    "/resource:$normalIcon,LightsOff.TrayNormal.ico" `
+    "/resource:$awakeIcon,LightsOff.TrayAwake.ico" `
     "/out:$exePath" (Join-Path $PSScriptRoot 'LightsOff.cs')
 if ($LASTEXITCODE -ne 0) {
     throw "C# compilation failed with exit code $LASTEXITCODE."
