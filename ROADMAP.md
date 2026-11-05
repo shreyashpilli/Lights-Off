@@ -8,7 +8,7 @@ Lights Off v0.1.0 is a portable Windows tray app. It keeps Windows awake, asks c
 
 1. Report whether Windows accepted the keep-awake and display power requests. Show a clear tray notification when a request fails.
 2. Add session lengths: 30 minutes, 1 hour, 2 hours, custom duration, end at a selected clock time, and until stopped.
-3. Show the remaining time in the tray tooltip. When a timed session ends, request display wake and return Windows to its normal power settings.
+3. Show the remaining time in the tray tooltip. When a timed session ends, release the keep-awake request and return Windows to its normal power settings. Do not send a display-on command when stopping.
 
 Redlight is a separate Windows accessibility app in `Redlight/`. It uses the Windows full-screen Magnification API instead of a desktop overlay.
 
@@ -18,7 +18,7 @@ Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPP
 
 - A test workload continues running while Lights Off is active and the displays are in standby.
 - The tray state clearly distinguishes an active session from a failed display request.
-- A timed session ends at the selected time, releases the keep-awake request, and requests display wake.
+- A timed session ends at the selected time and releases the keep-awake request without sending a display-on command.
 - An indefinite session continues until the user stops it or exits Lights Off.
 - A custom duration and selected clock time produce the expected end time, including the next-day case.
 

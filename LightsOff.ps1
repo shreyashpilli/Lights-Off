@@ -24,15 +24,13 @@ $script:HWND_BROADCAST = [IntPtr]0xffff
 $script:WM_SYSCOMMAND = [uint32]0x0112
 $script:SC_MONITORPOWER = [IntPtr]0xF170
 
-function Set-Displays([int]$PowerState) {
+function Request-DisplaysStandby {
     $result = [IntPtr]::Zero
-    # PowerState 2 requests standby. -1 requests the display turn on.
-    $state = [IntPtr]::new($PowerState)
     [void][LightsOffNative]::SendMessageTimeout(
         $script:HWND_BROADCAST,
         $script:WM_SYSCOMMAND,
         $script:SC_MONITORPOWER,
-        $state,
+        [IntPtr]::new(2),
         [uint32]0x0002,
         [uint32]1500,
         [ref]$result)
@@ -40,7 +38,6 @@ function Set-Displays([int]$PowerState) {
 
 function Stop-LightsOff {
     if (-not $script:active) { return }
-    Set-Displays -PowerState -1
     [void][LightsOffNative]::SetThreadExecutionState($script:ES_CONTINUOUS)
     $script:active = $false
     $status.Text = 'Session stopped. Windows power settings are back in control.'
@@ -81,7 +78,7 @@ $startButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
 $form.Controls.Add($startButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
-$stopButton.Text = 'Stop and wake displays'
+$stopButton.Text = 'Stop session'
 $stopButton.Location = New-Object System.Drawing.Point(210, 128)
 $stopButton.Size = New-Object System.Drawing.Size(188, 42)
 $stopButton.Enabled = $false
@@ -99,7 +96,7 @@ $notifyIcon.Text = 'Lights Off is off'
 $notifyIcon.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 $showItem = $menu.Items.Add('Open Lights Off')
-$stopItem = $menu.Items.Add('Stop and wake displays')
+$stopItem = $menu.Items.Add('Stop session')
 [void]$menu.Items.Add('-')
 $exitItem = $menu.Items.Add('Exit')
 $notifyIcon.ContextMenuStrip = $menu
@@ -114,7 +111,7 @@ $offTimer.Interval = 900
 $offTimer.Add_Tick({
     $offTimer.Stop()
     if ($script:active) {
-        Set-Displays -PowerState 2
+        Request-DisplaysStandby
         $notifyIcon.ShowBalloonTip(1800, 'Lights Off is active', 'The PC is staying awake. Displays were asked to enter standby.', [System.Windows.Forms.ToolTipIcon]::Info)
     }
 })
