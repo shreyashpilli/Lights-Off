@@ -97,17 +97,11 @@ internal static class Program
 
 internal sealed class LightsOffForm : Form
 {
-    private readonly Button startButton;
+    private readonly Button displayButton;
     private readonly Button stopButton;
     private readonly Label status;
-    private readonly ComboBox durationSelector;
-    private readonly NumericUpDown customHours;
-    private readonly NumericUpDown customMinutes;
-    private readonly Label customHoursLabel;
-    private readonly Label customMinutesLabel;
-    private readonly Label endTimeLabel;
-    private readonly DateTimePicker endTimePicker;
-    private readonly Label endTimeHint;
+    private readonly CheckBox keepAwakeToggle;
+    private readonly TextBox customMinutes;
     private readonly NotifyIcon trayIcon;
     private readonly System.Windows.Forms.Timer offTimer;
     private readonly System.Windows.Forms.Timer sessionTimer;
@@ -121,125 +115,102 @@ internal sealed class LightsOffForm : Form
     {
         Text = "Lights Off";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(500, 366);
+        ClientSize = new Size(520, 405);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
         Font = new Font("Segoe UI", 10F);
 
         Label title = new Label {
-            Text = "Keep your PC working. Turn the displays off.",
+            Text = "Turn monitors off. Keep your PC awake when needed.",
             Font = new Font("Segoe UI", 13F, FontStyle.Bold),
             Location = new Point(22, 20),
-            Size = new Size(456, 32)
+            Size = new Size(476, 32)
         };
         Controls.Add(title);
 
         Label body = new Label {
-            Text = "Your apps and AI agents keep running while Windows stays awake. Displays enter standby; monitor power is not cut completely.",
-            Location = new Point(24, 62),
-            Size = new Size(450, 42)
+            Text = "Left-click the tray icon to turn off the monitors. Keep-awake temporarily overrides Windows sleep settings.",
+            Location = new Point(24, 58),
+            Size = new Size(470, 38)
         };
         Controls.Add(body);
 
-        Label durationLabel = new Label {
-            Text = "Session ends",
-            Location = new Point(24, 116),
-            Size = new Size(126, 27)
+        displayButton = new Button {
+            Text = "Turn monitors off now",
+            Location = new Point(24, 106),
+            Size = new Size(470, 42)
         };
-        Controls.Add(durationLabel);
+        displayButton.Click += delegate { RequestDisplaysStandby(true); };
+        Controls.Add(displayButton);
 
-        durationSelector = new ComboBox {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            Location = new Point(150, 112),
-            Size = new Size(300, 28)
+        Label awakeHeading = new Label {
+            Text = "Keep PC awake",
+            Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+            Location = new Point(24, 164),
+            Size = new Size(200, 26)
         };
-        durationSelector.Items.AddRange(new object[] {
-            "Until stopped",
-            "30 minutes",
-            "1 hour",
-            "2 hours",
-            "Custom duration",
-            "End at a specific time"
-        });
-        durationSelector.SelectedIndex = 0;
-        durationSelector.SelectedIndexChanged += OnDurationModeChanged;
-        Controls.Add(durationSelector);
+        Controls.Add(awakeHeading);
 
-        customHoursLabel = new Label {
-            Text = "Hours",
-            Location = new Point(24, 147),
-            Size = new Size(52, 24),
-            Visible = false
+        keepAwakeToggle = new CheckBox {
+            Text = "Until I switch it off",
+            Location = new Point(24, 192),
+            Size = new Size(240, 25)
         };
-        Controls.Add(customHoursLabel);
+        keepAwakeToggle.CheckedChanged += OnKeepAwakeToggleChanged;
+        Controls.Add(keepAwakeToggle);
 
-        customHours = new NumericUpDown {
-            Location = new Point(78, 143),
-            Size = new Size(82, 26),
-            Minimum = 0,
-            Maximum = 999,
-            Value = 1,
-            Visible = false
+        Label presetsLabel = new Label {
+            Text = "Or choose a time:",
+            Location = new Point(24, 232),
+            Size = new Size(130, 24)
         };
-        Controls.Add(customHours);
+        Controls.Add(presetsLabel);
 
-        customMinutesLabel = new Label {
-            Text = "Minutes",
-            Location = new Point(176, 147),
-            Size = new Size(68, 24),
-            Visible = false
-        };
-        Controls.Add(customMinutesLabel);
+        AddPresetButton("30 minutes", 24, 260, 30);
+        AddPresetButton("1 hour", 174, 260, 60);
+        AddPresetButton("2 hours", 324, 260, 120);
 
-        customMinutes = new NumericUpDown {
-            Location = new Point(246, 143),
-            Size = new Size(82, 26),
-            Minimum = 0,
-            Maximum = 59,
-            Visible = false
+        Label customLabel = new Label {
+            Text = "Custom:",
+            Location = new Point(24, 326),
+            Size = new Size(74, 28)
         };
+        Controls.Add(customLabel);
+        customMinutes = new TextBox {
+            Text = "90",
+            Location = new Point(100, 322),
+            Size = new Size(72, 28)
+        };
+        customMinutes.KeyPress += OnlyAllowDigits;
         Controls.Add(customMinutes);
-
-        endTimeLabel = new Label {
-            Text = "End time",
-            Location = new Point(24, 147),
-            Size = new Size(92, 24),
-            Visible = false
+        Label minutesLabel = new Label {
+            Text = "minutes",
+            Location = new Point(178, 326),
+            Size = new Size(66, 24)
         };
-        Controls.Add(endTimeLabel);
-
-        endTimePicker = new DateTimePicker {
-            Format = DateTimePickerFormat.Custom,
-            CustomFormat = "h:mm tt",
-            ShowUpDown = true,
-            Location = new Point(120, 143),
-            Size = new Size(120, 26),
-            Value = DateTime.Now.AddHours(1),
-            Visible = false
+        Controls.Add(minutesLabel);
+        Button customStartButton = new Button {
+            Text = "Start custom",
+            Location = new Point(252, 320),
+            Size = new Size(140, 34)
         };
-        Controls.Add(endTimePicker);
-
-        endTimeHint = new Label {
-            Text = "Past time = tomorrow.",
-            Location = new Point(250, 147),
-            Size = new Size(245, 24),
-            Visible = false
+        customStartButton.Click += delegate {
+            int minutes;
+            if (!Int32.TryParse(customMinutes.Text, out minutes) || minutes < 1 || minutes > 59999)
+            {
+                MessageBox.Show(this, "Enter a whole number of minutes from 1 to 59999.",
+                    "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            StartKeepAwake(DateTime.Now.AddMinutes(minutes));
         };
-        Controls.Add(endTimeHint);
-
-        startButton = new Button {
-            Text = "Start Lights Off",
-            Location = new Point(24, 190),
-            Size = new Size(175, 42)
-        };
-        startButton.Click += StartSession;
-        Controls.Add(startButton);
+        Controls.Add(customStartButton);
 
         stopButton = new Button {
-            Text = "Stop session",
-            Location = new Point(210, 190),
-            Size = new Size(188, 42),
+            Text = "Allow normal sleep",
+            Location = new Point(24, 360),
+            Size = new Size(180, 34),
             Enabled = false
         };
         stopButton.Click += delegate { StopSession(false, true); };
@@ -247,15 +218,15 @@ internal sealed class LightsOffForm : Form
 
         status = new Label {
             Text = "Ready.",
-            Location = new Point(24, 312),
-            Size = new Size(450, 43)
+            Location = new Point(220, 358),
+            Size = new Size(270, 40)
         };
         Controls.Add(status);
 
         ContextMenuStrip menu = new ContextMenuStrip();
         menu.Items.Add("Open Lights Off", null, delegate { ShowWindow(); });
-        sessionMenuItem = new ToolStripMenuItem("Start Lights Off");
-        sessionMenuItem.Click += delegate { ToggleSession(null, EventArgs.Empty); };
+        sessionMenuItem = new ToolStripMenuItem("Keep PC awake") { CheckOnClick = true };
+        sessionMenuItem.Click += OnTrayKeepAwakeClicked;
         menu.Items.Add(sessionMenuItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, delegate { exiting = true; StopSession(false, false); Close(); });
@@ -277,116 +248,100 @@ internal sealed class LightsOffForm : Form
         FormClosing += OnFormClosing;
     }
 
-    private void StartSession(object sender, EventArgs e)
+    private void AddPresetButton(string text, int x, int y, int minutes)
     {
-        DateTime? deadline;
-        if (!TryGetSessionDeadline(out deadline))
+        Button button = new Button {
+            Text = text,
+            Location = new Point(x, y),
+            Size = new Size(140, 38)
+        };
+        button.Click += delegate { StartKeepAwake(DateTime.Now.AddMinutes(minutes)); };
+        Controls.Add(button);
+    }
+
+    private static void OnlyAllowDigits(object sender, KeyPressEventArgs e)
+    {
+        if (!Char.IsControl(e.KeyChar) && !Char.IsDigit(e.KeyChar))
+            e.Handled = true;
+    }
+
+    private void OnKeepAwakeToggleChanged(object sender, EventArgs e)
+    {
+        if (keepAwakeToggle.Checked)
+            StartKeepAwake(null);
+        else if (active && !sessionDeadline.HasValue)
+            StopSession(false, true);
+    }
+
+    private void OnTrayKeepAwakeClicked(object sender, EventArgs e)
+    {
+        if (!sessionMenuItem.Checked)
+            StopSession(false, true);
+        else
+            StartKeepAwake(null);
+    }
+
+    private void StartKeepAwake(DateTime? deadline)
+    {
+        if (!active)
         {
-            status.Text = "Enter a custom session length greater than zero.";
-            MessageBox.Show(this,
-                "A custom session must be at least 1 minute long.",
-                "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
+            uint state = NativeMethods.SetThreadExecutionState(
+                NativeMethods.EsContinuous | NativeMethods.EsSystemRequired);
+            if (state == 0)
+            {
+                status.Text = "Windows could not enable keep-awake mode.";
+                MessageBox.Show(this,
+                    "Windows could not enable keep-awake mode. Try closing and reopening Lights Off.",
+                    "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            active = true;
         }
 
-        uint state = NativeMethods.SetThreadExecutionState(
-            NativeMethods.EsContinuous | NativeMethods.EsSystemRequired);
-        if (state == 0)
-        {
-            status.Text = "Windows could not enable keep-awake mode.";
-            MessageBox.Show(this,
-                "Windows could not enable keep-awake mode. Try closing and reopening Lights Off.",
-                "Lights Off", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        active = true;
         displayRequestFailed = false;
         sessionDeadline = deadline;
-        startButton.Enabled = false;
+        sessionMenuItem.Checked = true;
+        keepAwakeToggle.Checked = !deadline.HasValue;
         stopButton.Enabled = true;
-        durationSelector.Enabled = false;
         UpdateSessionStatus();
         UpdateTrayText();
         offTimer.Start();
         if (sessionDeadline.HasValue)
             sessionTimer.Start();
-        TopMost = false;
-        Hide();
-    }
-
-    private void ToggleSession(object sender, EventArgs e)
-    {
-        if (active)
-            StopSession(false, true);
         else
-            StartSession(sender, e);
+            sessionTimer.Stop();
+        TopMost = false;
     }
 
     private void OnTrayIconMouseClick(object sender, MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Left)
-            ToggleSession(sender, EventArgs.Empty);
-    }
+        if (e.Button != MouseButtons.Left)
+            return;
 
-    private bool TryGetSessionDeadline(out DateTime? deadline)
-    {
-        deadline = null;
-        switch (durationSelector.SelectedIndex)
-        {
-            case 1: deadline = DateTime.Now.AddMinutes(30); return true;
-            case 2: deadline = DateTime.Now.AddHours(1); return true;
-            case 3: deadline = DateTime.Now.AddHours(2); return true;
-            case 4:
-                int totalCustomMinutes = ((int)customHours.Value * 60) + (int)customMinutes.Value;
-                if (totalCustomMinutes < 1)
-                    return false;
-                deadline = DateTime.Now.AddMinutes(totalCustomMinutes);
-                return true;
-            case 5:
-                DateTime now = DateTime.Now;
-                DateTime selectedTime = now.Date.Add(endTimePicker.Value.TimeOfDay);
-                if (selectedTime <= now)
-                    selectedTime = selectedTime.AddDays(1);
-                deadline = selectedTime;
-                return true;
-            default:
-                return true;
-        }
-    }
-
-    private void OnDurationModeChanged(object sender, EventArgs e)
-    {
-        bool customDuration = durationSelector.SelectedIndex == 4;
-        bool endAtTime = durationSelector.SelectedIndex == 5;
-        customHoursLabel.Visible = customDuration;
-        customHours.Visible = customDuration;
-        customMinutesLabel.Visible = customDuration;
-        customMinutes.Visible = customDuration;
-        endTimeLabel.Visible = endAtTime;
-        endTimePicker.Visible = endAtTime;
-        endTimeHint.Visible = endAtTime;
+        RequestDisplaysStandby(false);
     }
 
     private void OnDisplayStandbyTimer(object sender, EventArgs e)
     {
         offTimer.Stop();
-        if (!active)
-            return;
+        RequestDisplaysStandby(true);
+    }
 
+    private void RequestDisplaysStandby(bool showSuccess)
+    {
         displayRequestFailed = !NativeMethods.RequestDisplaysStandby();
         UpdateTrayText();
-        if (!displayRequestFailed)
-        {
-            trayIcon.ShowBalloonTip(1800, "Lights Off is active",
-                "Windows accepted the display standby request. The PC is staying awake.",
-                ToolTipIcon.Info);
-        }
-        else
+        if (displayRequestFailed)
         {
             trayIcon.ShowBalloonTip(5000, "Display standby request not confirmed",
-                "Lights Off is keeping the PC awake, but Windows did not confirm the display request. Check the display connection.",
+                "Windows did not confirm the monitor standby request. Check the display connection.",
                 ToolTipIcon.Warning);
+        }
+        else if (showSuccess)
+        {
+            trayIcon.ShowBalloonTip(1800, "Lights Off is active",
+                "Windows accepted the request to turn off the monitors.",
+                ToolTipIcon.Info);
         }
     }
 
@@ -409,7 +364,7 @@ internal sealed class LightsOffForm : Form
     {
         if (!sessionDeadline.HasValue)
         {
-            status.Text = "Session active until you stop it.";
+            status.Text = "PC awake. Windows sleep settings return when you switch this off.";
             return;
         }
 
@@ -422,11 +377,11 @@ internal sealed class LightsOffForm : Form
         if (!active)
         {
             trayIcon.Text = "Lights Off is off";
-            sessionMenuItem.Text = "Start Lights Off";
+            sessionMenuItem.Checked = false;
             return;
         }
 
-        sessionMenuItem.Text = "Stop session";
+        sessionMenuItem.Checked = true;
 
         if (displayRequestFailed)
         {
@@ -460,12 +415,12 @@ internal sealed class LightsOffForm : Form
         active = false;
         sessionDeadline = null;
         displayRequestFailed = false;
-        startButton.Enabled = true;
         stopButton.Enabled = false;
-        durationSelector.Enabled = true;
+        sessionMenuItem.Checked = false;
+        keepAwakeToggle.Checked = false;
         status.Text = sessionExpired
-            ? "Time limit reached. Windows power settings are back in control."
-            : "Session stopped. Windows power settings are back in control.";
+            ? "Timer ended. Windows sleep settings are back in control."
+            : "Keep-awake is off. Windows sleep settings are back in control.";
         UpdateTrayText();
 
         if (!notifyUser)
@@ -479,14 +434,14 @@ internal sealed class LightsOffForm : Form
         }
         else if (sessionExpired)
         {
-            trayIcon.ShowBalloonTip(3500, "Lights Off session ended",
-                "The time limit was reached. Windows power settings are back in control.",
+            trayIcon.ShowBalloonTip(3500, "Keep-awake timer ended",
+                "Windows sleep settings are back in control.",
                 ToolTipIcon.Info);
         }
         else
         {
-            trayIcon.ShowBalloonTip(2500, "Lights Off stopped",
-                "Windows power settings are back in control.",
+            trayIcon.ShowBalloonTip(2500, "Keep-awake is off",
+                "Windows sleep settings are back in control.",
                 ToolTipIcon.Info);
         }
     }
