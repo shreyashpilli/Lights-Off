@@ -1,0 +1,29 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build and smoke check
+        shell: powershell
+        run: .\build.ps1
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuietRun-Windows
+          path: dist/QuietRun-Windows.zip
+          if-no-files-found: error
