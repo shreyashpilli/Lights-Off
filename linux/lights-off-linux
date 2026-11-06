@@ -1,0 +1,7 @@
+#!/bin/sh
+APP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PYTHON="$APP_DIR/.venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+    PYTHON=python3
+fi
+exec "$PYTHON" "$APP_DIR/lights_off_linux.py" "$@"

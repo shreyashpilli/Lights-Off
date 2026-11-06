@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lights Off
+Comment=Put X11 monitors into standby or keep the PC awake
+Exec=lights-off-linux
+Icon=display
+Terminal=false
+Categories=Utility;
+StartupNotify=true
