@@ -22,7 +22,7 @@ The default **All displays** mode uses Windows' standard monitor-standby request
 
 ## Redlight
 
-The separate **Redlight** app applies a color matrix through the Windows full-screen Magnification API. It is designed to recolor the whole desktop, including other applications, without placing a tinted window over the screen. See [Redlight/README.md](Redlight/README.md) for its build and run instructions, recovery shortcut, and API limitations.
+**Redlight** is maintained in its own repository: [shreyashpilli/Redlight](https://github.com/shreyashpilli/Redlight). It applies a color transform across the Windows desktop through the full-screen Magnification API.
 
 ## Build from source
 
