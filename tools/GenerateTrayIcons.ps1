@@ -65,9 +65,9 @@ public static class LightsOffIconBuilder
             }
             if (awake)
             {
-                using (SolidBrush badge = new SolidBrush(Color.FromArgb(245, 158, 11)))
+                using (SolidBrush badge = new SolidBrush(Color.FromArgb(34, 197, 94)))
                 using (Pen edge = new Pen(screen, 2.5F))
-                using (SolidBrush bolt = new SolidBrush(Color.FromArgb(37, 27, 11)))
+                using (SolidBrush bolt = new SolidBrush(Color.FromArgb(12, 46, 25)))
                 using (GraphicsPath lightning = new GraphicsPath())
                 {
                     g.FillEllipse(badge, 41, 37, 18, 18);

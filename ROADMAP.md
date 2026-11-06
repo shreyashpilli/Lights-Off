@@ -2,7 +2,7 @@
 
 ## Current release
 
-Lights Off v0.1.0 is a portable Windows tray app. Left-click asks connected displays to enter standby. A separate tray toggle keeps the PC awake until turned off, and the app window offers timed keep-awake sessions.
+Lights Off v0.1.0 is a portable Windows tray app. Left-click asks connected displays to enter standby. A separate tray toggle keeps the PC awake until turned off, and the app window offers timed keep-awake sessions. The current settings UI also has configurable global shortcuts and expandable all, selected, or primary display targeting. Selected and primary modes use DDC/CI and remain hardware-dependent until validated with real monitor models.
 
 ## v0.2: Safer sessions
 
@@ -46,5 +46,5 @@ Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPP
 
 ## Out of scope for now
 
-- Sending vendor-specific DDC/CI power commands to force monitor power-off. Support and wake behavior vary by monitor, and the tested standby request already works on the target setup.
+- Expanding selected-display DDC/CI behavior beyond the current experimental implementation until it has been physically checked on representative hardware.
 - Detecting whether a particular AI agent is running. Lights Off should remain useful for any long-running workload.
