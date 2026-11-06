@@ -12,7 +12,7 @@ Lights Off v0.1.0 is a portable Windows tray app. Left-click asks connected disp
 
 Redlight is maintained separately in [its own repository](https://github.com/shreyashpilli/Redlight).
 
-Cross-platform planning for Lights Off is in [PLATFORM_SUPPORT.md](PLATFORM_SUPPORT.md). The first targets are a native macOS menu bar app and Linux X11 plus explicitly detected Wayland compositor support. Mac and Linux builds remain experimental until tested with real displays.
+Linux development is in [Lights-Off-Linux](https://github.com/shreyashpilli/Lights-Off-Linux). The macOS implementation plan is in [Lights-Off-macOS](https://github.com/shreyashpilli/Lights-Off-macOS). Neither platform is verified on physical hardware.
 
 ### Acceptance checks
 

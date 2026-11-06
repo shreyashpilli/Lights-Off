@@ -24,6 +24,11 @@ The default **All displays** mode uses Windows' standard monitor-standby request
 
 **Redlight** is maintained in its own repository: [shreyashpilli/Redlight](https://github.com/shreyashpilli/Redlight). It applies a color transform across the Windows desktop through the full-screen Magnification API.
 
+## Other platform projects
+
+- **Linux:** [Lights-Off-Linux](https://github.com/shreyashpilli/Lights-Off-Linux) contains the experimental X11 prototype. Wayland and tray support are not implemented.
+- **macOS:** [Lights-Off-macOS](https://github.com/shreyashpilli/Lights-Off-macOS) contains the platform plan. The macOS app has not been implemented yet.
+
 ## Build from source
 
 On Windows with .NET Framework 4.x, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`. The build script compiles `LightsOff.cs`, runs a smoke check that does not alter display power, and prints the executable's SHA-256 hash. After building, **Start Lights Off.cmd** launches `dist\LightsOff.exe`. The PowerShell prototype remains as a fallback for checkouts that have not been built; use the compiled app for timed sessions and the full tray controls.
