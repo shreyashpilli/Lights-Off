@@ -1309,7 +1309,7 @@ internal sealed class LightsOffForm : Form
 
     private void OnFormClosing(object sender, FormClosingEventArgs e)
     {
-        if (!exiting && active)
+        if (!exiting && e.CloseReason == CloseReason.UserClosing)
         {
             e.Cancel = true;
             TopMost = false;
